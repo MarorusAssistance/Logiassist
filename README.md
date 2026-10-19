@@ -1,10 +1,11 @@
-# Internal Assistant MVP
+# Logiassist
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Tests](https://img.shields.io/badge/tests-pytest-green)
+![Security](https://img.shields.io/badge/prompt%20injection-defensa%20en%20capas-critical)
 ![Status](https://img.shields.io/badge/status-MVP%20%2F%20Demo--ready-6f42c1)
 
-Asistente conversacional interno orientado a una empresa ficticia de logistica. El proyecto combina RAG hibrido, PostgreSQL + pgvector, registro de incidencias y una ruta de despliegue preparada para Azure y Microsoft Teams. La meta no es solo que el asistente "responda", sino que pueda explicarse, evaluarse y mostrarse con criterio tecnico en una demo o portfolio.
+Asistente conversacional interno para una empresa ficticia de logistica. Combina RAG hibrido sobre PostgreSQL + pgvector, reranking opcional (BGE local o Cohere), chat en streaming, registro de incidencias con reindexado, defensas en capas frente a prompt injection y un despliegue en Azure con los secretos en Key Vault. La meta no es solo que el asistente "responda", sino que pueda explicarse, evaluarse y mostrarse con criterio tecnico en una demo o portfolio.
 
 ## Que demuestra este proyecto
 
@@ -14,9 +15,14 @@ Asistente conversacional interno orientado a una empresa ficticia de logistica. 
 - trazabilidad de fuentes y fragmentos usados
 - flujo de aclaraciones cuando la evidencia no basta
 - registro de incidencias nuevas y reindexado posterior
-- evaluacion tecnica del RAG con metricas y reportes
-- despliegue Azure-ready con App Service, Functions y PostgreSQL
-- integracion con Teams como custom app
+- planner previo que decide si consultar memoria conversacional, indice o pedir aclaracion
+- reranking en segunda fase con un cross-encoder BGE local o Cohere Rerank
+- respuestas en streaming (SSE) con fuentes al terminar
+- defensa en capas frente a prompt injection directa e indirecta ([docs/security.md](docs/security.md))
+- evaluacion tecnica del RAG con metricas, LLM judge y **coste real por ejecucion**
+- trazabilidad con LangSmith y Application Insights
+- despliegue en Azure con App Service, Functions, PostgreSQL y secretos en Key Vault
+- integracion con Teams como custom app (opcional)
 
 ## Problema que resuelve
 
@@ -34,15 +40,15 @@ En una operacion interna es habitual que el conocimiento este repartido entre pr
 
 ## Arquitectura resumida
 
-- `app-service/`: FastAPI principal con `/api/chat`, `/api/messages`, health checks, feedback, endpoints de consulta y una UI web sencilla en `/demo`.
+- `app-service/`: FastAPI principal con `/api/chat`, `/api/chat/stream` (SSE), `/api/messages`, health checks, feedback, endpoints de consulta y la UI web en `/demo`.
 - `functions/custom-incidents-api-function/`: sistema fuente simulado para incidencias.
 - `functions/indexer-function/`: reindexado HTTP y mantenimiento de chunks/embeddings.
-- `src/internal_assistant/`: dominio compartido, providers LLM, RAG, cards, runtime y repositorios.
+- `src/internal_assistant/`: dominio compartido, providers LLM, RAG, reranking, guardias de seguridad, cards, runtime y repositorios.
 - `PostgreSQL + pgvector`: persistencia de incidents, documents, chunks, conversations, feedback y retrieval logs.
 - `evaluation/`: datasets, judges, runners y reportes para medir calidad RAG.
 - `teams-app/`: manifiesto y paquete de Teams para la demo cloud.
 
-Mas detalle en [docs/architecture.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/architecture.md).
+Mas detalle en [docs/architecture.md](docs/architecture.md).
 
 ## Stack tecnologico
 
@@ -56,7 +62,9 @@ Mas detalle en [docs/architecture.md](/c:/Users/maror/Projects/Personal/Asistent
 - Docker Compose
 - OpenAI API como provider cloud inicial
 - provider local `openai_compatible` para LM Studio, Ollama o similar
-- Azure App Service, Azure Functions, Azure Bot y PostgreSQL Flexible Server
+- Cohere Rerank (Azure AI Foundry) o BGE reranker local, opcionales
+- LangSmith y Application Insights para trazas
+- Azure App Service, Azure Functions, Azure Key Vault, Azure Bot y PostgreSQL Flexible Server
 
 ## Funcionalidades principales
 
@@ -111,7 +119,7 @@ python -m uv run uvicorn main:app --app-dir app-service --host 0.0.0.0 --port 80
 
 ## Como ejecutarlo en local
 
-1. Copia [`.env.example`](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/.env.example) a `.env`.
+1. Copia [`.env.example`](.env.example) a `.env`.
 2. Elige uno de estos modos:
    - `mock` para smoke tests baratos
    - `openai` para OpenAI real
@@ -138,7 +146,7 @@ python -m uv run python scripts/rebuild_index.py
 python -m uv run python scripts/check_index.py
 ```
 
-Guia ampliada en [docs/deployment-local.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/deployment-local.md).
+Guia ampliada en [docs/deployment-local.md](docs/deployment-local.md).
 
 ## Como poblar datos y reconstruir el indice
 
@@ -208,7 +216,7 @@ curl -X POST http://localhost:8000/api/chat \
 
 3. Sube `teams-app/build/internal-assistant-demo.zip` como custom app en tu tenant.
 
-Guia completa en [docs/teams-setup.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/teams-setup.md).
+Guia completa en [docs/teams-setup.md](docs/teams-setup.md).
 
 ## Como ejecutar evaluacion RAG
 
@@ -230,9 +238,11 @@ Comparacion de configuraciones de retrieval:
 python -m uv run python scripts/compare_retrieval_configs.py
 ```
 
+Cada reporte incluye una seccion `Cost` con el coste **real** de esa ejecucion. Se calcula a partir del `usage` que devuelven las APIs: tokens de entrada (incluidos los cacheados), tokens de salida, tokens de embeddings y *search units* del reranker. Se desglosa por componente y proposito (planner, respuesta, judge, embeddings, rerank) y se multiplica por la tabla versionada [evaluation/pricing.json](evaluation/pricing.json). Los providers locales registran tokens con coste 0.
+
 Los reportes quedan en `evaluation/reports/` como archivos JSON y Markdown. No se envian a Table Storage ni a otro artifact remoto por defecto.
 
-Mas detalle en [docs/rag-evaluation.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/rag-evaluation.md).
+Mas detalle en [docs/rag-evaluation.md](docs/rag-evaluation.md).
 
 ## Trazabilidad RAG
 
@@ -252,9 +262,14 @@ LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 
 No hay una variable para ocultar contenido en LangSmith: si esta activo, recibe prompts, contexto recuperado y respuestas para poder diagnosticar calidad. App Insights no recibe ese contenido completo.
 
-## Reranker local opcional
+## Reranker opcional
 
-El retrieval puede usar un BGE cross-encoder local como segunda fase de ranking. Por defecto esta desactivado para no afectar Azure ni el flujo basico.
+El retrieval puede reordenar los candidatos con un cross-encoder como segunda fase. Por defecto esta desactivado. Hay dos opciones:
+
+- `RERANKER_PROVIDER=http`: BGE cross-encoder local servido por `scripts/serve_reranker.py` (coste 0).
+- `RERANKER_PROVIDER=cohere_azure`: Cohere Rerank v3.5 desplegado en Azure AI Foundry (se factura por *search unit*).
+
+### BGE local
 
 ```bash
 python -m uv run --extra reranker python scripts/serve_reranker.py
@@ -269,6 +284,17 @@ RERANKER_MODEL=BAAI/bge-reranker-v2-m3
 RERANKER_CANDIDATES=30
 ```
 
+### Cohere en Azure
+
+```env
+RERANKER_ENABLED=true
+RERANKER_PROVIDER=cohere_azure
+RERANKER_BASE_URL=https://<endpoint>.<region>.models.ai.azure.com
+RERANKER_API_KEY=<api-key>
+RERANKER_MODEL=Cohere-rerank-v3.5
+RERANKER_CANDIDATES=30
+```
+
 Despues de aplicar la migracion de metadata de chunks, reconstruye el indice:
 
 ```bash
@@ -278,14 +304,17 @@ python -m uv run python scripts/rebuild_index.py
 
 ## Como desplegarlo en Azure
 
-1. Copia [`.env.azure.example`](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/.env.azure.example) a `.env.azure`.
+1. Copia [`.env.azure.example`](.env.azure.example) a `.env.azure`.
 2. Rellena secretos, nombre del proyecto y credenciales del bot.
 3. Ejecuta:
 
 ```bash
 ./scripts/azure_login_check.sh
 ./scripts/deploy_infra.sh
+./scripts/sync_keyvault_secrets.sh --dry-run   # lista solo nombres
+./scripts/sync_keyvault_secrets.sh
 ./scripts/configure_app_settings.sh
+./scripts/check_keyvault_refs.sh
 ./scripts/deploy_app_service.sh
 ./scripts/deploy_functions.sh
 ./scripts/seed_cloud_db.sh
@@ -294,7 +323,18 @@ python -m uv run python scripts/rebuild_index.py
 ./scripts/smoke_test_cloud.sh
 ```
 
-Guia ampliada en [docs/deployment-azure.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/deployment-azure.md).
+### Secretos en Key Vault
+
+Los secretos (`OPENAI_API_KEY`, `DATABASE_URL`, `APP_SHARED_SECRET`, `RERANKER_API_KEY`, `LANGSMITH_API_KEY`...) no se guardan como App Settings en claro:
+
+- `deploy_infra.sh` crea un Key Vault con autorizacion RBAC y activa una identidad administrada en la Web App y en las dos Function Apps, con el rol `Key Vault Secrets User`.
+- `sync_keyvault_secrets.sh` lee `.env.azure` y sube cada secreto con `az keyvault secret set --file`, a traves de un fichero temporal `0600` que se borra al terminar. El valor nunca aparece en argv (`ps`), en stdout ni en el historial. El script es idempotente.
+- `configure_app_settings.sh` escribe referencias `@Microsoft.KeyVault(VaultName=...;SecretName=...)` en lugar de valores.
+- `check_keyvault_refs.sh` comprueba que cada referencia se resuelve y muestra solo nombre y estado.
+
+Para rotar un secreto: cambia `.env.azure` y ejecuta `sync_keyvault_secrets.sh` y despues `check_keyvault_refs.sh --restart`. Para volver al modo anterior: `USE_KEY_VAULT=false`.
+
+Guia ampliada en [docs/deployment-azure.md](docs/deployment-azure.md).
 
 ## Estrategia de costes
 
@@ -304,30 +344,40 @@ Guia ampliada en [docs/deployment-azure.md](/c:/Users/maror/Projects/Personal/As
 - mantener SKUs pequenos
 - no activar Azure OpenAI ni extras enterprise en esta fase
 
-Detalle en [docs/cost-control.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/cost-control.md).
+Detalle en [docs/cost-control.md](docs/cost-control.md).
+
+## Seguridad frente a prompt injection
+
+Todo texto que no sea el system prompt se trata como dato no confiable: el mensaje del usuario, los chunks, las incidencias registradas por usuarios y la memoria. Las defensas se aplican en capas:
+
+- guardia de entrada que rechaza sin llamar al LLM los intentos de anular instrucciones, cambiar de rol, sacar el prompt o secretos, saltarse controles o inventar contenido. Tambien normaliza el Unicode invisible
+- cuarentena de chunks y memorias que contienen instrucciones dirigidas al modelo (inyeccion indirecta)
+- spotlighting: los datos van entre delimitadores con un nonce aleatorio que no se puede cerrar desde dentro
+- jerarquia de instrucciones explicita y canary token en el system prompt
+- guardia de salida que bloquea fugas del prompt o de secretos y elimina imagenes o enlaces externos (exfiltracion). Tambien vigila el streaming
+- minimo privilegio: el LLM no tiene herramientas, y las incidencias solo se crean con confirmacion explicita
+- aislamiento de conversaciones entre usuarios
+
+Detalle, observabilidad y limitaciones en [docs/security.md](docs/security.md).
 
 ## Limitaciones reales del MVP
 
-- no hay SSO ni RBAC real
-- no hay Key Vault obligatorio
-- no hay reranking avanzado
+- no hay SSO ni RBAC real: `user_id` lo envia el cliente
+- la deteccion de inyeccion por patrones se puede esquivar con parafrasis creativas; las demas capas no dependen de ella
 - la calidad RAG depende del corpus sintetico y del provider de embeddings
 - Teams requiere tenant con custom apps o sideloading habilitado
 - el flujo prioriza claridad tecnica y demo por encima de hardening enterprise
 
 ## Proximos pasos posibles
 
-- endurecer evaluacion adversarial y prompt safety
-- introducir seguridad por departamentos
-- migrar secretos a Key Vault
+- SSO con Entra ID y permisos por departamento sobre el retrieval
+- clasificador dedicado de prompt injection (por ejemplo Prompt Shields) como capa adicional
 - ampliar dataset y cobertura funcional
-- evaluar Azure OpenAI o un provider enterprise equivalente
-- mejorar el flujo Teams con cards mas ricas y telemetria adicional
 
 ## Estructura del repositorio
 
 ```text
-internal-assistant-mvp/
+logiassist/
 +-- app-service/
 +-- functions/
 +-- src/internal_assistant/
@@ -342,12 +392,13 @@ internal-assistant-mvp/
 
 ## Documentacion clave
 
-- [docs/portfolio-summary.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/portfolio-summary.md)
-- [docs/tradeoffs-and-decisions.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/tradeoffs-and-decisions.md)
-- [docs/demo-script.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/demo-script.md)
-- [docs/demo-checklist.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/demo-checklist.md)
-- [docs/faq.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/faq.md)
-- [docs/project-card.md](/c:/Users/maror/Projects/Personal/Asistente-Interno-Microsoft-Teams/docs/project-card.md)
+- [docs/security.md](docs/security.md)
+- [docs/portfolio-summary.md](docs/portfolio-summary.md)
+- [docs/tradeoffs-and-decisions.md](docs/tradeoffs-and-decisions.md)
+- [docs/demo-script.md](docs/demo-script.md)
+- [docs/demo-checklist.md](docs/demo-checklist.md)
+- [docs/faq.md](docs/faq.md)
+- [docs/project-card.md](docs/project-card.md)
 
 ## Licencia / aviso de uso
 
