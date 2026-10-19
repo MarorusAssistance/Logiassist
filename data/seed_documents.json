@@ -1,302 +1,342 @@
 [
   {
     "id": 1,
-    "title": "Registro de entregas parciales en ventana crítica",
+    "title": "Cierre de expediciones en AlmaTrack WMS",
     "document_type": "procedimiento",
     "department": "Operaciones",
-    "affected_system": "LogiCore ERP",
-    "content": "Registro de entregas parciales en ventana crítica es un documento interno de Operaciones para el sistema LogiCore ERP. Describe cómo registrar expediciones parciales sin perder la promesa de servicio ni la trazabilidad del pedido cuando un camión sale con parte de la carga pendiente. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: marcar los bultos expedidos y los retenidos por separado confirmar la actualización del pedido y del panel de incidencias del turno adjuntar observación sobre la causa operativa y la hora estimada del siguiente envío Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si el pedido queda bloqueado durante más de diez minutos, Operaciones debe escalarlo a soporte funcional de LogiCore ERP. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "AlmaTrack WMS",
+    "content": "Objetivo. Cierre de expediciones en AlmaTrack WMS define un criterio operativo para Operaciones dentro de AlmaTrack WMS. Explica cómo cerrar expediciones cuando el almacén ya confirmó preparación, embalaje y salida física. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Cubre expediciones estándar, parciales y cierres con bultos retenidos por ubicación o muelle. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Validar que todas las tareas de picking y packing estén cerradas. 2. Comprobar bultos esperados contra bultos leídos en muelle. 3. Registrar excepción si queda mercancía retenida. 4. Confirmar expedición y revisar que el estado llegue al panel de seguimiento. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No cerrar si existen tareas RF abiertas. - No modificar cantidades sin conteo de supervisor. - Revisar etiquetas de transporte antes de liberar el muelle. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. captura interna del cierre, lista de bultos, muelle, usuario de confirmación y observación de cualquier entrega parcial. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el cierre no propaga estado en diez minutos, abrir ticket en HelpOps con prioridad alta y bloquear nuevas salidas del pedido afectado. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "operaciones",
-      "logicore-erp"
+      "almatrack-wms",
+      "procedimiento",
+      "cierre"
     ],
-    "source_url": "https://intranet.logistica.local/documents/001",
-    "created_at": "2026-01-06T08:00:00+00:00",
-    "updated_at": "2026-01-06T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-04T07:30:00+00:00",
+    "updated_at": "2026-02-04T09:30:00+00:00"
   },
   {
     "id": 2,
-    "title": "Replanificación de rutas tras cierre de carretera",
+    "title": "Gestión de diferencias de stock y conteos cíclicos",
     "document_type": "procedimiento",
     "department": "Operaciones",
-    "affected_system": "RutaNexo",
-    "content": "Replanificación de rutas tras cierre de carretera es un documento interno de Operaciones para el sistema RutaNexo. Establece el flujo para recalcular rutas afectadas por restricciones viales, cambios de secuencia o incidencias que obligan a rehacer la asignación del conductor. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en RutaNexo debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: revisar restricciones del vehículo y del conductor antes de recalcular validar que cada parada mantenga ventana, prioridad y observaciones publicar la nueva secuencia solo después de revisar impactos en la torre de control Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la ruta no publica una nueva secuencia válida, debe abrirse incidencia de prioridad alta y avisar al coordinador regional. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "AlmaTrack WMS",
+    "content": "Objetivo. Gestión de diferencias de stock y conteos cíclicos define un criterio operativo para Operaciones dentro de AlmaTrack WMS. Describe cómo aislar una diferencia de stock sin contaminar el inventario disponible ni frenar zonas no afectadas. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a conteos cíclicos, ubicaciones de picking, reserva de expedición y mercancía en cuarentena operativa. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Poner la ubicación en revisión. 2. Contar físico, reservado y en tránsito por separado. 3. Comparar el histórico de movimientos. 4. Cerrar ajuste solo con aprobación del supervisor. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No liberar picking si el stock físico no cuadra. - Distinguir merma, reubicación y reserva pendiente. - Documentar si la diferencia afecta a lote o caducidad. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. recuento firmado, motivo de ajuste, ubicación, lote, artículo y comparación antes y después. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si la diferencia se repite en dos conteos consecutivos, escalar a reconciliación ERP-WMS. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "operaciones",
-      "rutanexo"
+      "almatrack-wms",
+      "procedimiento",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/002",
-    "created_at": "2026-01-07T08:00:00+00:00",
-    "updated_at": "2026-01-07T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-05T07:30:00+00:00",
+    "updated_at": "2026-02-05T09:30:00+00:00"
   },
   {
     "id": 3,
-    "title": "Conteo cíclico con diferencia de inventario",
+    "title": "Reasignación de rutas y transportistas en RutaNexo TMS",
     "document_type": "procedimiento",
     "department": "Operaciones",
-    "affected_system": "AlmaTrack WMS",
-    "content": "Conteo cíclico con diferencia de inventario es un documento interno de Operaciones para el sistema AlmaTrack WMS. Define cómo aislar ubicaciones con diferencias de inventario y cómo registrar la cuarentena operativa hasta cerrar la validación con el supervisor de almacén. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en AlmaTrack WMS debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: poner la ubicación en cuarentena antes de liberar nuevas tareas comparar stock físico, stock reservado y stock en tránsito cerrar la diferencia solo con la aprobación del supervisor asignado Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la diferencia supera el umbral del turno o afecta varios pasillos, se eleva al responsable del centro. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "RutaNexo TMS",
+    "content": "Objetivo. Reasignación de rutas y transportistas en RutaNexo TMS define un criterio operativo para Operaciones dentro de RutaNexo TMS. Establece el flujo para cambiar ruta, transportista o secuencia de paradas manteniendo promesa de entrega. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Cubre cierres de carretera, ausencia de conductor, cambio de vehículo, parada prioritaria y reparto de carga entre rutas. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Congelar la versión activa de la ruta. 2. Revisar ventanas, restricciones de vehículo y observaciones de cliente. 3. Seleccionar transportista alternativo validado. 4. Publicar nueva secuencia y confirmar recepción por el conductor. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No recalcular sin revisar paradas críticas. - Conservar motivo de cambio. - Revisar impacto en POD y CMR. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. versión de ruta anterior y nueva, transportista, paradas afectadas, ETA revisado y usuario que publica. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si la ruta queda congelada o sin secuencia final, HelpOps debe recibir ticket crítico con identificador de ruta y centro. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "operaciones",
-      "almatrack-wms"
+      "rutanexo-tms",
+      "procedimiento",
+      "reasignacion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/003",
-    "created_at": "2026-01-08T08:00:00+00:00",
-    "updated_at": "2026-01-08T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-06T07:30:00+00:00",
+    "updated_at": "2026-02-06T09:30:00+00:00"
   },
   {
     "id": 4,
-    "title": "Gestión de pedidos retenidos por validación manual",
-    "document_type": "guía",
+    "title": "Gestión de pedidos retenidos en LogiCore ERP",
+    "document_type": "guía de diagnóstico",
     "department": "Operaciones",
     "affected_system": "LogiCore ERP",
-    "content": "Gestión de pedidos retenidos por validación manual es un documento interno de Operaciones para el sistema LogiCore ERP. Explica cómo revisar pedidos retenidos por reglas manuales de negocio antes de liberarlos al circuito de preparación y expedición. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: verificar dirección, ventana y observaciones del cliente confirmar que no haya duplicidad de líneas ni bloqueos de crédito ficticios registrar el motivo de liberación o rechazo en la observación interna Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Cualquier retención reiterada del mismo cliente debe revisarse en la reunión diaria de backoffice. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "content": "Objetivo. Gestión de pedidos retenidos en LogiCore ERP define un criterio operativo para Operaciones dentro de LogiCore ERP. Ayuda a revisar pedidos bloqueados por reglas de negocio, datos maestros o incoherencias de preparación. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a pedidos de cliente, intercentro y reposición que no avanzan a almacén o facturación interna. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Identificar regla de retención. 2. Verificar dirección, condiciones de entrega y líneas duplicadas. 3. Contrastar disponibilidad con AlmaTrack WMS. 4. Liberar, rechazar o devolver a backoffice con motivo. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No liberar si falta validación de datos maestros. - No forzar estado si WMS no tiene stock disponible. - Mantener observación de auditoría. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. captura del bloqueo, regla aplicada, usuario revisor, pedido, centro y decisión final. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el pedido combina error de stock y retención manual, priorizar reconciliación antes de prometer salida. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "operaciones",
-      "logicore-erp"
+      "logicore-erp",
+      "guia-de-diagnostico",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/004",
-    "created_at": "2026-01-09T08:00:00+00:00",
-    "updated_at": "2026-01-09T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-07T07:30:00+00:00",
+    "updated_at": "2026-02-07T09:30:00+00:00"
   },
   {
     "id": 5,
-    "title": "Sincronización de ubicaciones tras reasignación masiva",
-    "document_type": "guía",
-    "department": "Operaciones",
-    "affected_system": "AlmaTrack WMS",
-    "content": "Sincronización de ubicaciones tras reasignación masiva es un documento interno de Operaciones para el sistema AlmaTrack WMS. Recoge las verificaciones necesarias tras una reasignación masiva de ubicaciones, especialmente cuando hay oleadas de preparación abiertas. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en AlmaTrack WMS debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: comparar el inventario visible en RF y en la consola del supervisor validar que los movimientos queden reflejados en el histórico interno bloquear las tareas de picking conflictivas hasta cerrar la revisión Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la sincronización no converge en dos intentos, debe notificarse al responsable de WMS. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Alta y baja de usuarios operativos en SafeGate",
+    "document_type": "procedimiento de seguridad",
+    "department": "Seguridad",
+    "affected_system": "SafeGate",
+    "content": "Objetivo. Alta y baja de usuarios operativos en SafeGate define un criterio operativo para Seguridad dentro de SafeGate. Define altas, bajas y cambios de acceso para usuarios internos, visitas técnicas y personal externo de almacén. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a accesos físicos, grupos de zona, horarios de turno y revocaciones al finalizar actividad. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Comprobar rol operativo y responsable interno. 2. Asignar zona, horario y duración. 3. Validar entrada de prueba si es alta crítica. 4. Revocar permiso al terminar relación o servicio. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No reutilizar credenciales de otra persona. - Evitar permisos permanentes para visitas. - Registrar aprobador y fecha de caducidad. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. solicitud aprobada, grupo asignado, zona, caducidad y confirmación de baja cuando aplique. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Cualquier acceso denegado repetido debe tratarse como incidencia de seguridad y no como simple duda operativa. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "operaciones",
-      "almatrack-wms"
+      "seguridad",
+      "safegate",
+      "procedimiento-de-seguridad",
+      "alta"
     ],
-    "source_url": "https://intranet.logistica.local/documents/005",
-    "created_at": "2026-01-10T08:00:00+00:00",
-    "updated_at": "2026-01-10T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-08T07:30:00+00:00",
+    "updated_at": "2026-02-08T09:30:00+00:00"
   },
   {
     "id": 6,
-    "title": "Activación de plan alternativo por caída de integración",
-    "document_type": "procedimiento",
-    "department": "Operaciones",
-    "affected_system": "DocuFlow",
-    "content": "Activación de plan alternativo por caída de integración es un documento interno de Operaciones para el sistema DocuFlow. Detalla cómo consultar y ejecutar el procedimiento alternativo cuando la documentación operativa indica una caída temporal de alguna integración interna. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en DocuFlow debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: trabajar siempre sobre la versión vigente del documento publicada en DocuFlow anotar inicio y fin del modo alternativo con responsables de turno reconciliar manualmente los movimientos creados durante la contingencia Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Toda contingencia superior a treinta minutos debe escalarse a continuidad operativa. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Escalado de incidencias críticas en HelpOps",
+    "document_type": "guía de escalado",
+    "department": "Seguridad",
+    "affected_system": "HelpOps",
+    "content": "Objetivo. Escalado de incidencias críticas en HelpOps define un criterio operativo para Seguridad dentro de HelpOps. Clasifica cuándo una incidencia debe elevarse por impacto en expedición, seguridad, calidad o continuidad de turno. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a bloqueos con pedidos parados, rutas congeladas, accesos masivos denegados, lotes bloqueados y pérdida de trazabilidad. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Registrar síntoma observable. 2. Indicar sistema, centro, turno y referencia. 3. Asignar prioridad según impacto. 4. Notificar al responsable de guardia si hay parada operativa. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No cerrar sin evidencia de recuperación. - No duplicar tickets sin relacionarlos. - Mantener estado abierto si no hay resolución validada. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. ticket con categoría correcta, impacto, referencias operativas y relación con documentos o incidencias previas. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si hay riesgo de seguridad o calidad, el escalado debe ser inmediato aunque el volumen afectado sea bajo. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "operaciones",
-      "docuflow"
+      "seguridad",
+      "helpops",
+      "guia-de-escalado",
+      "escalado"
     ],
-    "source_url": "https://intranet.logistica.local/documents/006",
-    "created_at": "2026-01-11T08:00:00+00:00",
-    "updated_at": "2026-01-11T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-09T07:30:00+00:00",
+    "updated_at": "2026-02-09T09:30:00+00:00"
   },
   {
     "id": 7,
-    "title": "Cierre de expedición con incidencias de última milla",
-    "document_type": "procedimiento",
-    "department": "Operaciones",
-    "affected_system": "RutaNexo",
-    "content": "Cierre de expedición con incidencias de última milla es un documento interno de Operaciones para el sistema RutaNexo. Resume cómo cerrar una expedición cuando la última milla sufre incidencias, devoluciones parciales o cambios de parada en el mismo turno. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en RutaNexo debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: registrar motivo de cierre excepcional y prueba de entrega interna notificar al backoffice cualquier parada omitida o reprogramada actualizar el ETA interno antes de confirmar el cierre del viaje Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Los cierres incompletos deben revisarse por el planificador antes del cierre de jornada. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Onboarding de coordinadores de turno en OnboardHub",
+    "document_type": "guía de onboarding",
+    "department": "Onboarding",
+    "affected_system": "OnboardHub",
+    "content": "Objetivo. Onboarding de coordinadores de turno en OnboardHub define un criterio operativo para Onboarding dentro de OnboardHub. Enumera los pasos mínimos para que una persona nueva pueda operar como coordinador sin depender de conocimiento informal. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Cubre formación inicial, lectura de procedimientos, permisos, acompañamiento y validación de primer turno. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Completar ficha de rol y centro. 2. Leer procedimientos críticos en DocuFlow. 3. Asignar mentor y turno de sombra. 4. Validar permisos de LogiCore ERP, AlmaTrack WMS, RutaNexo TMS y SafeGate. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No cerrar onboarding sin mentor asignado. - Verificar acuse de lectura. - Confirmar que los permisos coinciden con el rol real. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. checklist firmado, mentor, módulos completados, permisos asignados y fecha de validación. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si falta acuse de lectura o permiso esencial, Onboarding mantiene el expediente abierto y abre ticket en HelpOps. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "operaciones",
-      "rutanexo"
+      "onboarding",
+      "onboardhub",
+      "guia-de-onboarding",
+      "onboarding"
     ],
-    "source_url": "https://intranet.logistica.local/documents/007",
-    "created_at": "2026-01-12T08:00:00+00:00",
-    "updated_at": "2026-01-12T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-10T07:30:00+00:00",
+    "updated_at": "2026-02-10T09:30:00+00:00"
   },
   {
     "id": 8,
-    "title": "Control operativo de pedidos intercentro",
-    "document_type": "guía",
+    "title": "Extracción y validación de documentos en ScanBridge IDP",
+    "document_type": "procedimiento",
     "department": "Operaciones",
-    "affected_system": "LogiCore ERP",
-    "content": "Control operativo de pedidos intercentro es un documento interno de Operaciones para el sistema LogiCore ERP. Describe cómo validar pedidos que cruzan más de un centro logístico y requieren mantener coherencia entre reserva, expedición y recepción. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: comprobar origen, tránsito y destino en el mismo hilo operativo revisar etiquetas, bultos y ventanas comprometidas confirmar que el pedido no quede visible en estados contradictorios Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Cualquier divergencia entre centros debe escalarse al coordinador de red logística. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "ScanBridge IDP",
+    "content": "Objetivo. Extracción y validación de documentos en ScanBridge IDP define un criterio operativo para Operaciones dentro de ScanBridge IDP. Describe cómo validar OCR de albaranes, POD, CMR y documentos de recepción antes de integrarlos en el expediente. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a documentos escaneados, anexos ilegibles, campos de pedido, matrícula, transportista, fecha y firma. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Revisar calidad de imagen. 2. Comparar campos extraídos contra pedido o ruta. 3. Marcar campos dudosos para revisión manual. 4. Enviar solo documentos validados a DocuFlow o LogiCore ERP. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No aceptar matrícula o firma con baja confianza. - No mezclar documentos de rutas distintas. - Guardar motivo de corrección manual. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. imagen revisada, campos corregidos, motivo de validación manual y referencia documental. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si dos extracciones fallan para el mismo tipo de documento, crear incidencia de análisis en HelpOps. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "operaciones",
-      "logicore-erp"
+      "scanbridge-idp",
+      "procedimiento",
+      "extraccion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/008",
-    "created_at": "2026-01-13T08:00:00+00:00",
-    "updated_at": "2026-01-13T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-11T07:30:00+00:00",
+    "updated_at": "2026-02-11T09:30:00+00:00"
   },
   {
     "id": 9,
-    "title": "Alta temporal de visitas técnicas en control de accesos",
+    "title": "Gestión de POD, CMR y justificantes de entrega",
     "document_type": "procedimiento",
-    "department": "Seguridad",
-    "affected_system": "SafeGate",
-    "content": "Alta temporal de visitas técnicas en control de accesos es un documento interno de Seguridad para el sistema SafeGate. Define cómo crear credenciales temporales para visitas técnicas sin reutilizar accesos antiguos ni exponer zonas restringidas del centro. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: validar responsable interno, zona permitida y hora de caducidad registrar documento de identidad y acompañante asignado revocar la credencial al cerrar la intervención o al terminar el turno Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la visita requiere ampliar alcance o duración, Seguridad debe aprobarlo de nuevo antes de continuar. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "department": "Operaciones",
+    "affected_system": "RutaNexo TMS",
+    "content": "Objetivo. Gestión de POD, CMR y justificantes de entrega define un criterio operativo para Operaciones dentro de RutaNexo TMS. Define cómo recoger, validar y asociar pruebas de entrega y documentos de transporte al cierre de ruta. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a POD digital, CMR escaneado, justificantes con firma parcial, entrega fallida y devolución de bultos. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Comprobar que el documento pertenece a la parada correcta. 2. Validar fecha, firma y bultos entregados. 3. Asociar justificante a ruta y pedido. 4. Registrar excepción si falta prueba o hay entrega parcial. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No cerrar ruta sin motivo si falta POD. - Distinguir entrega fallida de entrega parcial. - Conservar documento original escaneado. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. identificador de ruta, parada, pedido, justificante y observación de excepción. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el justificante no es legible, usar ScanBridge IDP y dejar el expediente en revisión. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "seguridad",
-      "safegate"
+      "operaciones",
+      "rutanexo-tms",
+      "procedimiento",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/009",
-    "created_at": "2026-01-14T08:00:00+00:00",
-    "updated_at": "2026-01-14T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-12T07:30:00+00:00",
+    "updated_at": "2026-02-12T09:30:00+00:00"
   },
   {
     "id": 10,
-    "title": "Gestión de permisos especiales para turnos nocturnos",
-    "document_type": "guía",
+    "title": "Bloqueo y desbloqueo de lotes por calidad en QualiTrace QMS",
+    "document_type": "procedimiento de calidad",
     "department": "Seguridad",
-    "affected_system": "SafeGate",
-    "content": "Gestión de permisos especiales para turnos nocturnos es un documento interno de Seguridad para el sistema SafeGate. Explica cómo revisar permisos de acceso excepcionales de personal de guardia, mantenimiento o supervisión durante franjas nocturnas. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: verificar que el permiso indique fecha, turno y supervisor revisar doble factor, grupo de acceso y motivo de excepción confirmar la retirada del permiso al cerrar el servicio Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Los accesos fallidos repetidos deben derivarse a investigación interna de Seguridad. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "QualiTrace QMS",
+    "content": "Objetivo. Bloqueo y desbloqueo de lotes por calidad en QualiTrace QMS define un criterio operativo para Seguridad dentro de QualiTrace QMS. Establece cuándo bloquear lotes, cómo liberar producto y qué evidencias necesita Calidad para cerrar una no conformidad. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a lote dañado, temperatura fuera de rango, embalaje comprometido, reclamación de cliente o auditoría interna. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Bloquear lote y ubicaciones asociadas. 2. Registrar motivo y alcance. 3. Tomar muestra o evidencia visual. 4. Liberar solo tras dictamen de Calidad. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No mover lote bloqueado a expedición. - No cerrar sin dictamen. - Informar a LogiCore ERP si afecta pedidos retenidos. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. lote, artículo, ubicación, dictamen de calidad, fotos internas y decisión de liberación o destrucción. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el lote afecta pedidos ya preparados, Operaciones debe coordinar sustitución antes de cerrar expedición. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "seguridad",
-      "safegate"
+      "qualitrace-qms",
+      "procedimiento-de-calidad",
+      "bloqueo"
     ],
-    "source_url": "https://intranet.logistica.local/documents/010",
-    "created_at": "2026-01-15T08:00:00+00:00",
-    "updated_at": "2026-01-15T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-13T07:30:00+00:00",
+    "updated_at": "2026-02-13T09:30:00+00:00"
   },
   {
     "id": 11,
-    "title": "Bloqueo preventivo ante credenciales compartidas",
-    "document_type": "política",
-    "department": "Seguridad",
-    "affected_system": "SafeGate",
-    "content": "Bloqueo preventivo ante credenciales compartidas es un documento interno de Seguridad para el sistema SafeGate. Establece que las credenciales compartidas están prohibidas y que cualquier indicio de uso simultáneo debe bloquearse de forma preventiva. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: documentar la alerta con usuario, hora y zona afectada notificar al responsable del área antes de reactivar accesos forzar renovación de credenciales y revisión de permisos asociados Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Las reincidencias se tratan como incidente de seguridad y se elevan a la coordinación regional. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Reconciliación ERP-WMS ante diferencias de stock",
+    "document_type": "guía de diagnóstico",
+    "department": "Operaciones",
+    "affected_system": "LogiCore ERP",
+    "content": "Objetivo. Reconciliación ERP-WMS ante diferencias de stock define un criterio operativo para Operaciones dentro de LogiCore ERP. Guía para comparar stock administrativo y stock operativo cuando ERP y WMS muestran cantidades distintas. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a pedidos bloqueados, reposición, ubicaciones en cuarentena y ajustes posteriores a recepción. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Identificar artículo, lote y centro. 2. Comparar disponible, reservado y en tránsito. 3. Revisar último movimiento en ambos sistemas. 4. Corregir origen de la diferencia antes de ajustar destino. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No ajustar ambos sistemas a la vez. - Evitar liberar pedidos sin stock confirmado. - Registrar sistema origen del descuadre. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. captura comparativa, movimiento causante, responsable de ajuste y validación cruzada posterior. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si no se identifica origen en el turno, mantener bloqueo y escalar a soporte funcional. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "seguridad",
-      "safegate"
+      "operaciones",
+      "logicore-erp",
+      "guia-de-diagnostico",
+      "reconciliacion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/011",
-    "created_at": "2026-01-16T08:00:00+00:00",
-    "updated_at": "2026-01-16T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-14T07:30:00+00:00",
+    "updated_at": "2026-02-14T09:30:00+00:00"
   },
   {
     "id": 12,
-    "title": "Procedimiento de revisión de bitácoras de acceso",
+    "title": "Procedimiento de recepción de mercancía",
     "document_type": "procedimiento",
-    "department": "Seguridad",
-    "affected_system": "DocuFlow",
-    "content": "Procedimiento de revisión de bitácoras de acceso es un documento interno de Seguridad para el sistema DocuFlow. Recoge el método para consultar bitácoras internas de acceso publicadas en DocuFlow y contrastarlas con eventos reportados por el equipo de guardia. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en DocuFlow debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: consultar la versión vigente de la bitácora y no una copia local anotar discrepancias entre evento observado y evento registrado cerrar la revisión con observaciones aprobadas por el supervisor Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Cuando la bitácora no cuadre con el evento físico, se eleva a investigación interna y soporte funcional. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "department": "Operaciones",
+    "affected_system": "AlmaTrack WMS",
+    "content": "Objetivo. Procedimiento de recepción de mercancía define un criterio operativo para Operaciones dentro de AlmaTrack WMS. Detalla la recepción física y documental de mercancía entrante antes de poner stock disponible para preparación. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a proveedores, traspasos intercentro, devoluciones de cliente y mercancía con documentación parcial. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Registrar llegada y muelle. 2. Validar pedido o aviso de entrada. 3. Contar bultos y revisar daños. 4. Ubicar mercancía o dejarla en revisión. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No recibir sin referencia operativa. - Separar discrepancias de cantidad y calidad. - Informar a ScanBridge IDP si la documentación es ilegible. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. aviso de entrada, bultos recibidos, diferencias, fotos internas y ubicación final. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si hay daño o lote dudoso, activar QualiTrace QMS antes de liberar stock. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "seguridad",
-      "docuflow"
+      "operaciones",
+      "almatrack-wms",
+      "procedimiento",
+      "procedimiento"
     ],
-    "source_url": "https://intranet.logistica.local/documents/012",
-    "created_at": "2026-01-17T08:00:00+00:00",
-    "updated_at": "2026-01-17T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-15T07:30:00+00:00",
+    "updated_at": "2026-02-15T09:30:00+00:00"
   },
   {
     "id": 13,
-    "title": "Custodia de credenciales para proveedores recurrentes",
-    "document_type": "política",
+    "title": "Gestión de devoluciones de cliente",
+    "document_type": "guía",
     "department": "Seguridad",
-    "affected_system": "SafeGate",
-    "content": "Custodia de credenciales para proveedores recurrentes es un documento interno de Seguridad para el sistema SafeGate. Define cómo asignar y custodiar credenciales de proveedores recurrentes sin exponer accesos permanentes ni reutilizar tarjetas caducadas. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: ligar cada credencial a una persona física identificada revisar la vigencia del contrato o autorización del proveedor devolver o revocar la credencial al cierre de cada servicio Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: El incumplimiento de devolución obliga a bloqueo inmediato y revisión del expediente interno. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "LogiCore ERP",
+    "content": "Objetivo. Gestión de devoluciones de cliente define un criterio operativo para Seguridad dentro de LogiCore ERP. Explica cómo registrar devoluciones, clasificar motivo y decidir si el producto vuelve a stock, revisión o calidad. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a devolución por daño, error de preparación, entrega rechazada, producto equivocado y documentación incompleta. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Crear expediente de devolución. 2. Asociar pedido y motivo. 3. Enviar mercancía a ubicación de revisión. 4. Actualizar estado tras dictamen operativo o de calidad. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No reincorporar producto sin revisión. - Mantener trazabilidad de bultos. - Distinguir devolución comercial de incidencia logística. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. pedido, motivo, bultos, estado físico, decisión y sistema donde se actualiza. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si la devolución contiene daño o sospecha de lote, Calidad debe revisar en QualiTrace QMS. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "seguridad",
-      "safegate"
+      "logicore-erp",
+      "guia",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/013",
-    "created_at": "2026-01-18T08:00:00+00:00",
-    "updated_at": "2026-01-18T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-16T07:30:00+00:00",
+    "updated_at": "2026-02-16T09:30:00+00:00"
   },
   {
     "id": 14,
-    "title": "Respuesta inicial ante alarma de acceso denegado",
-    "document_type": "guía",
+    "title": "Política de permisos temporales para personal externo",
+    "document_type": "política",
     "department": "Seguridad",
     "affected_system": "SafeGate",
-    "content": "Respuesta inicial ante alarma de acceso denegado es un documento interno de Seguridad para el sistema SafeGate. Describe el protocolo inicial cuando varias personas reportan acceso denegado y existe riesgo de impedir la entrada al turno operativo. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: comprobar vigencia del permiso, zona, horario y factor adicional registrar incidencia y personas afectadas antes de abrir una excepción validar con el supervisor si el acceso de contingencia es procedente Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la alarma afecta a más de un grupo de acceso, se activa coordinación de continuidad. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "content": "Objetivo. Política de permisos temporales para personal externo define un criterio operativo para Seguridad dentro de SafeGate. Define límites para permisos de proveedores, auditorías, visitas técnicas y personal temporal. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a accesos físicos por centro, zonas restringidas, horarios excepcionales y acompañamiento obligatorio. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Recoger responsable interno. 2. Asignar alcance mínimo necesario. 3. Definir caducidad. 4. Revisar cierre del permiso. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No crear accesos indefinidos. - No usar permisos temporales para tareas recurrentes. - Revocar si cambia el alcance. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. solicitud, aprobador, zona, fecha de inicio, fecha de fin y confirmación de revocación. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Cualquier excepción debe quedar aprobada por Seguridad y registrada en HelpOps si genera incidencia. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "seguridad",
-      "safegate"
+      "safegate",
+      "politica",
+      "politica"
     ],
-    "source_url": "https://intranet.logistica.local/documents/014",
-    "created_at": "2026-01-19T08:00:00+00:00",
-    "updated_at": "2026-01-19T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-17T07:30:00+00:00",
+    "updated_at": "2026-02-17T09:30:00+00:00"
   },
   {
     "id": 15,
-    "title": "Alta de conductores y validación documental",
-    "document_type": "guía",
-    "department": "Onboarding",
-    "affected_system": "OnboardHub",
-    "content": "Alta de conductores y validación documental es un documento interno de Onboarding para el sistema OnboardHub. Detalla cómo dar de alta a nuevos conductores, validar licencias, cursos internos y supervisor asignado antes del primer turno. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en OnboardHub debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: comprobar licencia, formación y firma del responsable asignar supervisor y centro antes de publicar el alta registrar incidencias documentales en el expediente interno Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si falta documentación crítica, el alta no debe avanzar a la siguiente fase. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Revisión de KPIs operativos en OpsLake",
+    "document_type": "faq operativa",
+    "department": "Politicas internas",
+    "affected_system": "OpsLake",
+    "content": "Objetivo. Revisión de KPIs operativos en OpsLake define un criterio operativo para Politicas internas dentro de OpsLake. Define cómo interpretar indicadores de productividad, cumplimiento de rutas, exactitud de stock y tiempos de resolución. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a comités diarios, revisión de turno, seguimiento de SLA interno y detección de datos incompletos. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Seleccionar centro y ventana temporal. 2. Revisar fuente del indicador. 3. Comparar dato agregado con sistema transaccional. 4. Documentar desviaciones antes de presentar conclusión. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No usar KPI si falta actualización de origen. - No mezclar centros sin normalizar calendario. - Señalar datos provisionales. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. panel, filtro aplicado, fecha de extracción, sistema origen y comentario de desviación. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si un KPI contradice el dato operativo, abrir incidencia de datos en HelpOps y no usarlo para decisiones críticas. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "onboarding",
-      "onboardhub"
+      "politicas-internas",
+      "opslake",
+      "faq-operativa",
+      "revision"
     ],
-    "source_url": "https://intranet.logistica.local/documents/015",
-    "created_at": "2026-01-20T08:00:00+00:00",
-    "updated_at": "2026-01-20T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-18T07:30:00+00:00",
+    "updated_at": "2026-02-18T09:30:00+00:00"
   },
   {
     "id": 16,
-    "title": "Checklist de bienvenida para personal de almacén",
-    "document_type": "guía",
-    "department": "Onboarding",
-    "affected_system": "OnboardHub",
-    "content": "Checklist de bienvenida para personal de almacén es un documento interno de Onboarding para el sistema OnboardHub. Resume los pasos de bienvenida, permisos, formación y entrega de material para nuevas incorporaciones del área de almacén. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en OnboardHub debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: confirmar acceso, supervisor, calendario y equipo asignado registrar la lectura de normas de seguridad y operación validar que el empleado conozca el circuito de soporte y escalado Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Las altas incompletas deben bloquearse antes de llegar al primer turno productivo. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Gestión de incidencias por transportista",
+    "document_type": "guía de escalado",
+    "department": "Seguridad",
+    "affected_system": "RutaNexo TMS",
+    "content": "Objetivo. Gestión de incidencias por transportista define un criterio operativo para Seguridad dentro de RutaNexo TMS. Establece cómo clasificar retrasos, rechazos, ausencias de conductor y problemas documentales del transportista. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a transporte contratado, transportista alternativo, ruta subcontratada y cierre de servicio con documentación pendiente. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Registrar transportista y ruta. 2. Clasificar incidencia por demora, documentación o rechazo. 3. Aplicar plan alternativo si afecta ventana crítica. 4. Cerrar con evidencia de recuperación. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No penalizar sin evidencia. - Separar causa interna de causa del transportista. - Relacionar POD o CMR pendiente. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. ruta, transportista, hora comprometida, causa, acción correctiva y documento asociado. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el transportista acumula tres incidencias relevantes, Escalado revisa la continuidad del servicio. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "onboarding",
-      "onboardhub"
+      "seguridad",
+      "rutanexo-tms",
+      "guia-de-escalado",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/016",
-    "created_at": "2026-01-21T08:00:00+00:00",
-    "updated_at": "2026-01-21T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-19T07:30:00+00:00",
+    "updated_at": "2026-02-19T09:30:00+00:00"
   },
   {
     "id": 17,
-    "title": "Entrega controlada de manuales operativos",
-    "document_type": "procedimiento",
+    "title": "Procedimiento de inventario cíclico",
+    "document_type": "checklist",
     "department": "Onboarding",
-    "affected_system": "DocuFlow",
-    "content": "Entrega controlada de manuales operativos es un documento interno de Onboarding para el sistema DocuFlow. Explica cómo entregar manuales operativos, políticas internas y procedimientos críticos a nuevas incorporaciones usando DocuFlow como fuente única. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en DocuFlow debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: publicar solo la versión aprobada y vigente del manual registrar confirmación de lectura y fecha de revisión retirar enlaces obsoletos de materiales de arranque anteriores Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si la persona no puede acceder a la documentación, debe escalarse al responsable de onboarding. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "AlmaTrack WMS",
+    "content": "Objetivo. Procedimiento de inventario cíclico define un criterio operativo para Onboarding dentro de AlmaTrack WMS. Checklist operativo para ejecutar inventario cíclico sin interrumpir oleadas críticas de preparación. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a nuevos coordinadores, supervisores de almacén y equipos de apoyo durante conteos planificados. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Bloquear ubicaciones seleccionadas. 2. Asignar contador y revisor. 3. Registrar cantidad física. 4. Resolver diferencias antes de liberar ubicación. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No contar ubicaciones con tarea activa. - No aceptar conteo sin revisor. - Conservar histórico del ajuste. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. lista de ubicaciones, contador, revisor, diferencias y validación final. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el conteo impacta expediciones abiertas, coordinar con cierre de expediciones antes de liberar stock. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "onboarding",
-      "docuflow"
+      "almatrack-wms",
+      "checklist",
+      "procedimiento"
     ],
-    "source_url": "https://intranet.logistica.local/documents/017",
-    "created_at": "2026-01-22T08:00:00+00:00",
-    "updated_at": "2026-01-22T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-20T07:30:00+00:00",
+    "updated_at": "2026-02-20T09:30:00+00:00"
   },
   {
     "id": 18,
-    "title": "Asignación de permisos iniciales por rol",
-    "document_type": "guía",
+    "title": "Checklist de apertura y cierre de turno",
+    "document_type": "checklist",
     "department": "Onboarding",
-    "affected_system": "SafeGate",
-    "content": "Asignación de permisos iniciales por rol es un documento interno de Onboarding para el sistema SafeGate. Define la asignación inicial de permisos físicos para nuevas altas según rol, zona operativa y centro logístico. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en SafeGate debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: verificar rol, supervisor y centro antes de emitir credenciales evitar grupos de acceso genéricos o heredados documentar la expiración prevista si el rol es temporal Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Toda desviación frente al perfil estándar debe aprobarla Seguridad antes de entregar la credencial. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "HelpOps",
+    "content": "Objetivo. Checklist de apertura y cierre de turno define un criterio operativo para Onboarding dentro de HelpOps. Resume controles diarios para iniciar y cerrar turno con incidencias, handover y sistemas críticos revisados. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a coordinadores nuevos, responsables de turno y equipos que reciben relevo entre almacén, transporte y soporte. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Revisar tickets abiertos. 2. Confirmar pedidos y rutas críticas. 3. Validar accesos necesarios. 4. Registrar handover con riesgos y responsables. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No cerrar turno con incidente crítico sin dueño. - No omitir sistemas con alertas. - Separar pendiente operativo de pendiente técnico. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. lista de pendientes, responsable de cada acción, ticket relacionado y hora de revisión. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el relevo no puede asumir un pendiente, abrir o actualizar ticket en HelpOps antes de salir del turno. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "onboarding",
-      "safegate"
+      "helpops",
+      "checklist",
+      "checklist"
     ],
-    "source_url": "https://intranet.logistica.local/documents/018",
-    "created_at": "2026-01-23T08:00:00+00:00",
-    "updated_at": "2026-01-23T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-21T07:30:00+00:00",
+    "updated_at": "2026-02-21T09:30:00+00:00"
   },
   {
     "id": 19,
-    "title": "Escalado de incidencias críticas con impacto operativo",
-    "document_type": "política",
-    "department": "Politicas internas",
-    "affected_system": "DocuFlow",
-    "content": "Escalado de incidencias críticas con impacto operativo es un documento interno de Politicas internas para el sistema DocuFlow. Fija cuándo una incidencia pasa a nivel crítico y cómo debe escalarse cuando afecta expediciones, accesos o integraciones de más de un centro. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en DocuFlow debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: medir impacto en pedidos, turnos y continuidad operativa abrir ticket con prioridad adecuada y responsable visible mantener actualizaciones temporales hasta cierre o contención Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Toda incidencia crítica debe revisarse en la mesa de continuidad y dejar retrospectiva documentada. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "title": "Gestión de documentos incompletos o ilegibles",
+    "document_type": "guía de diagnóstico",
+    "department": "Onboarding",
+    "affected_system": "ScanBridge IDP",
+    "content": "Objetivo. Gestión de documentos incompletos o ilegibles define un criterio operativo para Onboarding dentro de ScanBridge IDP. Explica cómo tratar documentos escaneados con baja calidad, campos ausentes o contradicciones entre imagen y dato extraído. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a recepción, POD, CMR, devolución, alta documental y expedientes de onboarding con anexos obligatorios. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Identificar campo afectado. 2. Revisar imagen original. 3. Solicitar nueva captura si falta dato crítico. 4. Marcar documento como pendiente si no se puede validar. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No corregir campos críticos sin evidencia. - No cerrar expediente con firma ilegible. - Relacionar documento con pedido, ruta o persona según proceda. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. documento original, campo dudoso, decisión de revisión y motivo de rechazo o aceptación. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el problema afecta muchos documentos del mismo lote de escaneo, crear ticket de análisis en HelpOps. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
-      "politicas-internas",
-      "docuflow"
+      "onboarding",
+      "scanbridge-idp",
+      "guia-de-diagnostico",
+      "gestion"
     ],
-    "source_url": "https://intranet.logistica.local/documents/019",
-    "created_at": "2026-01-24T08:00:00+00:00",
-    "updated_at": "2026-01-24T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-22T07:30:00+00:00",
+    "updated_at": "2026-02-22T09:30:00+00:00"
   },
   {
     "id": 20,
-    "title": "Cambios maestros y doble validación",
+    "title": "Política de trazabilidad y fuentes del asistente interno",
     "document_type": "política",
     "department": "Politicas internas",
-    "affected_system": "LogiCore ERP",
-    "content": "Cambios maestros y doble validación es un documento interno de Politicas internas para el sistema LogiCore ERP. Establece que los cambios en datos maestros con efecto en pedidos recurrentes requieren doble validación antes de publicarse. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\n\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nControles obligatorios: revisar origen de la solicitud y alcance del cambio validar impacto en facturación, entrega y planificación registrar quién autoriza y cuándo se ejecuta el cambio Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar.\n\nEl documento también recuerda que las consultas sobre permisos, datos maestros, credenciales temporales o movimientos masivos nunca deben resolverse con atajos manuales no documentados. Toda excepción operativa debe quedar anotada con motivo, alcance, duración prevista, aprobador y evidencia de cierre para auditoría interna.\n\nEscalado y seguimiento: Si el cambio puede afectar rutas ya cerradas, se escala a coordinación operativa antes de aplicarlo. La versión vigente sustituye cualquier copia local previa y debe revisarse siempre desde el repositorio interno antes de ejecutar tareas críticas o responder dudas en el asistente.",
+    "affected_system": "DocuFlow",
+    "content": "Objetivo. Política de trazabilidad y fuentes del asistente interno define un criterio operativo para Politicas internas dentro de DocuFlow. Define cómo debe responder el asistente interno cuando usa documentación, incidencias resueltas o casos abiertos como evidencia. El documento está redactado para equipos internos de una compañía logística ficticia y usa ejemplos originales de almacén, transporte, soporte y control de calidad.\n\nAlcance. Aplica a respuestas de soporte operativo, consultas de managers, dudas de onboarding y análisis de incidentes similares. Aplica a coordinadores de turno, backoffice operativo, supervisores de almacén, seguridad o soporte funcional según el proceso afectado. Si el caso no coincide con este alcance, debe pedirse aclaración antes de ejecutar cambios.\n\nPasos de trabajo. 1. Citar fuente documental o incidencia usada. 2. Distinguir procedimiento vigente de caso similar. 3. Pedir aclaración si falta sistema, proceso o error exacto. 4. Ofrecer registro de incidencia si no hay conocimiento suficiente. El operador debe registrar cada decisión en el expediente operativo, indicando centro, turno, referencia de pedido, ruta, lote o documento cuando corresponda.\n\nControles mínimos. - No presentar un caso parecido como solución definitiva. - No usar fuentes de sistemas distintos sin advertirlo. - No inventar pasos ausentes del corpus. Ningún cierre se considera válido si queda una diferencia visible entre panel operativo, historial del sistema y evidencia revisada por el responsable del turno.\n\nEvidencia esperada. identificador de documento o incidencia, fragmento relevante, estado del caso y motivo de confianza. La evidencia debe permitir reconstruir qué se revisó, qué dato cambió y quién aprobó la acción. Las notas vagas o sin referencia operativa no son suficientes para cerrar el caso.\n\nEscalado. Si el asistente no encuentra evidencia directa, debe explicar la limitación y proponer recopilar datos mínimos para registrar un nuevo caso. Cuando el asistente interno use este documento como fuente, debe citar el sistema, el procedimiento y los pasos relevantes, sin convertir incidencias parecidas en una solución definitiva si falta contexto del usuario.",
     "tags": [
       "politicas-internas",
-      "logicore-erp"
+      "docuflow",
+      "politica",
+      "politica"
     ],
-    "source_url": "https://intranet.logistica.local/documents/020",
-    "created_at": "2026-01-25T08:00:00+00:00",
-    "updated_at": "2026-01-25T10:00:00+00:00"
+    "source_url": null,
+    "created_at": "2026-02-23T07:30:00+00:00",
+    "updated_at": "2026-02-23T09:30:00+00:00"
   }
 ]

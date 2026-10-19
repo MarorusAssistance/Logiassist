@@ -3,9 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import sys
 from typing import Any
 
 from sqlalchemy import text
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from internal_assistant.db import session_scope
 from internal_assistant.models import Document, Incident

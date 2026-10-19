@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import sys
 import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from internal_assistant.db import session_scope
 from internal_assistant.functions import rebuild_index

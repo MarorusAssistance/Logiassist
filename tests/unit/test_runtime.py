@@ -62,3 +62,45 @@ def test_validate_runtime_settings_allows_local_defaults():
     )
 
     assert validate_runtime_settings(settings) == []
+
+
+def test_validate_runtime_settings_allows_openai_embeddings_with_local_chat():
+    settings = SimpleNamespace(
+        app_env="local",
+        database_url="postgresql+psycopg://local",
+        llm_provider="openai_compatible",
+        llm_base_url="http://127.0.0.1:1234/v1",
+        llm_api_key="",
+        embeddings_provider="openai",
+        openai_api_key="sk-real",
+        admin_api_key="change-this-admin-key",
+        app_shared_secret="change-this-shared-secret",
+        microsoft_app_id="",
+        microsoft_app_password="",
+        microsoft_app_tenant_id="",
+        bot_endpoint="",
+    )
+
+    assert validate_runtime_settings(settings) == []
+
+
+def test_validate_runtime_settings_requires_openai_key_for_openai_embeddings():
+    settings = SimpleNamespace(
+        app_env="local",
+        database_url="postgresql+psycopg://local",
+        llm_provider="openai_compatible",
+        llm_base_url="http://127.0.0.1:1234/v1",
+        llm_api_key="",
+        embeddings_provider="openai",
+        openai_api_key="",
+        admin_api_key="change-this-admin-key",
+        app_shared_secret="change-this-shared-secret",
+        microsoft_app_id="",
+        microsoft_app_password="",
+        microsoft_app_tenant_id="",
+        bot_endpoint="",
+    )
+
+    errors = validate_runtime_settings(settings)
+
+    assert "OPENAI_API_KEY es obligatorio cuando EMBEDDINGS_PROVIDER=openai" in errors

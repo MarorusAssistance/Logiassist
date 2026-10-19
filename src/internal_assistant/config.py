@@ -30,6 +30,10 @@ class Settings(BaseSettings):
         default="",
         alias="APPLICATIONINSIGHTS_CONNECTION_STRING",
     )
+    langsmith_tracing: bool = Field(default=False, alias="LANGSMITH_TRACING")
+    langsmith_api_key: str = Field(default="", alias="LANGSMITH_API_KEY")
+    langsmith_project: str = Field(default="internal-assistant-mvp", alias="LANGSMITH_PROJECT")
+    langsmith_endpoint: str = Field(default="https://api.smith.langchain.com", alias="LANGSMITH_ENDPOINT")
     allowed_origins: str = Field(default="", alias="ALLOWED_ORIGINS")
     bot_endpoint: str = Field(default="", alias="BOT_ENDPOINT")
     custom_incidents_api_base_url: str = Field(default="http://localhost:7071", alias="CUSTOM_INCIDENTS_API_BASE_URL")
@@ -46,6 +50,13 @@ class Settings(BaseSettings):
     teams_app_id: str = Field(default="", alias="TEAMS_APP_ID")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     retrieval_confidence_threshold: float = Field(default=0.58, alias="RETRIEVAL_CONFIDENCE_THRESHOLD")
+    reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
+    reranker_provider: str = Field(default="http", alias="RERANKER_PROVIDER")
+    reranker_base_url: str = Field(default="http://127.0.0.1:8091", alias="RERANKER_BASE_URL")
+    reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="RERANKER_MODEL")
+    reranker_api_key: str = Field(default="", alias="RERANKER_API_KEY")
+    reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
+    reranker_candidates: int = Field(default=30, alias="RERANKER_CANDIDATES")
     eval_max_concurrency: int = Field(default=1, alias="EVAL_MAX_CONCURRENCY")
 
     @property

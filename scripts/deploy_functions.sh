@@ -50,12 +50,12 @@ deploy_zip_via_kudu() {
   local kudu_password
   package_native="$(native_path "${package_file}")"
   kudu_user="$(az functionapp deployment list-publishing-profiles \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
     --name "${app_name}" \
     --query "[?publishMethod=='MSDeploy'] | [0].userName" \
     -o tsv | tr -d '\r\n')"
   kudu_password="$(az functionapp deployment list-publishing-profiles \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
     --name "${app_name}" \
     --query "[?publishMethod=='MSDeploy'] | [0].userPWD" \
     -o tsv | tr -d '\r\n')"
@@ -111,19 +111,19 @@ require_vars AZURE_RESOURCE_GROUP
 load_bicep_outputs
 
 az functionapp config appsettings set \
-  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
   --name "${AZURE_INDEXER_FUNCTION_NAME}" \
   --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true >/dev/null
 az functionapp config appsettings delete \
-  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
   --name "${AZURE_INDEXER_FUNCTION_NAME}" \
   --setting-names WEBSITE_RUN_FROM_PACKAGE >/dev/null 2>&1 || true
 az functionapp config appsettings set \
-  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
   --name "${AZURE_INCIDENTS_FUNCTION_NAME}" \
   --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true ENABLE_ORYX_BUILD=true >/dev/null
 az functionapp config appsettings delete \
-  --resource-group "${AZURE_RESOURCE_GROUP}" \
+  --resource-group "${AZURE_FUNCTIONS_RESOURCE_GROUP}" \
   --name "${AZURE_INCIDENTS_FUNCTION_NAME}" \
   --setting-names WEBSITE_RUN_FROM_PACKAGE >/dev/null 2>&1 || true
 

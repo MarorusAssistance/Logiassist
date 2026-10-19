@@ -1,0 +1,817 @@
+{
+  "created_at": "2026-05-08T15:32:48.998644+00:00",
+  "baseline_path": "evaluation/reports/manual_trace_debug_phase2_20260508_141428.json",
+  "config": {
+    "chat_provider": "openai_compatible",
+    "embedding_provider": "openai",
+    "chat_model": "qwen/qwen3-30b-a3b-2507",
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimensions": 1024,
+    "langsmith_tracing": true,
+    "langsmith_project": "Asistente Interno Microsoft Teams",
+    "langsmith_endpoint": "https://eu.api.smith.langchain.com"
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "message": "Como se registra una entrega parcial en ventana critica en LogiCore ERP?",
+      "elapsed_ms": 6453,
+      "conversation_id": 14,
+      "message_id": 72,
+      "needs_clarification": false,
+      "clarification_attempt": 0,
+      "should_offer_incident": false,
+      "source_count": 5,
+      "sources": [
+        {
+          "source_type": "document",
+          "source_id": 1,
+          "title": "Registro de entregas parciales en ventana crítica",
+          "source_url": "https://intranet.logistica.local/documents/001",
+          "excerpt": "Registro de entregas parciales en ventana crítica es un documento interno de Operaciones para el sistema LogiCore ERP. Describe cómo registrar expediciones parciales sin perder la promesa de servicio ni la trazabilidad del pedido cuando un camión sale con part",
+          "chunk_id": 401
+        },
+        {
+          "source_type": "document",
+          "source_id": 4,
+          "title": "Gestión de pedidos retenidos por validación manual",
+          "source_url": "https://intranet.logistica.local/documents/004",
+          "excerpt": "Gestión de pedidos retenidos por validación manual es un documento interno de Operaciones para el sistema LogiCore ERP. Explica cómo revisar pedidos retenidos por reglas manuales de negocio antes de liberarlos al circuito de preparación y expedición. La refere",
+          "chunk_id": 410
+        },
+        {
+          "source_type": "document",
+          "source_id": 1,
+          "title": "Registro de entregas parciales en ventana crítica",
+          "source_url": "https://intranet.logistica.local/documents/001",
+          "excerpt": "peración no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\nControles obligatorios: marcar los bultos expedidos y los retenidos por separado confirmar la actualización d",
+          "chunk_id": 402
+        },
+        {
+          "source_type": "incident",
+          "source_id": 4,
+          "title": "Pedido retenido por validación manual #084",
+          "source_url": "https://intranet.logistica.local/incidents/084",
+          "excerpt": "tervención se realizó dentro de la ventana autorizada por el supervisor y se documentó con hora de inicio, usuario responsable y referencia de cambio.\nValidación posterior: Backoffice validó que el pedido pasó a preparación, generó tareas y quedó visible en el",
+          "chunk_id": 472
+        },
+        {
+          "source_type": "document",
+          "source_id": 5,
+          "title": "Sincronización de ubicaciones tras reasignación masiva",
+          "source_url": "https://intranet.logistica.local/documents/005",
+          "excerpt": "peración no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\nControles obligatorios: comparar el inventario visible en RF y en la consola del supervisor validar que los m",
+          "chunk_id": 414
+        }
+      ],
+      "answer": "Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del pedido y del panel de incidencias del turno, adjuntar una observación sobre la causa operativa y la hora estimada del siguiente envío. Además, se requiere que cualquier cambio en el sistema deje trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.",
+      "fallback_text": "Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del pedido y del panel de incidencias del turno, adjuntar una observación sobre la causa operativa y la hora estimada del siguiente envío. Además, se requiere que cualquier cambio en el sistema deje trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.\n\nFuentes consultadas\n- [1] Documento 1 - Registro de entregas parciales en ventana crítica: https://intranet.logistica.local/documents/001\n- [2] Documento 4 - Gestión de pedidos retenidos por validación manual: https://intranet.logistica.local/documents/004\n- [3] Documento 1 - Registro de entregas parciales en ventana crítica: https://intranet.logistica.local/documents/001\n- [4] Incidencia 4 - Pedido retenido por validación manual #084: https://intranet.logistica.local/incidents/084\n- [5] Documento 5 - Sincronización de ubicaciones tras reasignación masiva: https://intranet.logistica.local/documents/005\n\nIncidencias relacionadas\n- INC-S00004: Pedido retenido por validación manual #004 (resolved)"
+    },
+    {
+      "turn": 2,
+      "message": "Soy nuevo en operaciones. Que pasos de onboarding debo completar?",
+      "elapsed_ms": 6646,
+      "conversation_id": 14,
+      "message_id": 74,
+      "needs_clarification": false,
+      "clarification_attempt": 0,
+      "should_offer_incident": false,
+      "source_count": 5,
+      "sources": [
+        {
+          "source_type": "document",
+          "source_id": 15,
+          "title": "Alta de conductores y validación documental",
+          "source_url": "https://intranet.logistica.local/documents/015",
+          "excerpt": "Alta de conductores y validación documental es un documento interno de Onboarding para el sistema OnboardHub. Detalla cómo dar de alta a nuevos conductores, validar licencias, cursos internos y supervisor asignado antes del primer turno. La referencia se utili",
+          "chunk_id": 443
+        },
+        {
+          "source_type": "document",
+          "source_id": 16,
+          "title": "Checklist de bienvenida para personal de almacén",
+          "source_url": "https://intranet.logistica.local/documents/016",
+          "excerpt": "Checklist de bienvenida para personal de almacén es un documento interno de Onboarding para el sistema OnboardHub. Resume los pasos de bienvenida, permisos, formación y entrega de material para nuevas incorporaciones del área de almacén. La referencia se utili",
+          "chunk_id": 446
+        },
+        {
+          "source_type": "incident",
+          "source_id": 5,
+          "title": "Checklist de onboarding sin supervisor asignado #085",
+          "source_url": "https://intranet.logistica.local/incidents/085",
+          "excerpt": "tervención se realizó dentro de la ventana autorizada por el supervisor y se documentó con hora de inicio, usuario responsable y referencia de cambio.\nValidación posterior: Onboarding confirmó que el expediente pasó a estado listo y que el supervisor veía la i",
+          "chunk_id": 475
+        },
+        {
+          "source_type": "incident",
+          "source_id": 5,
+          "title": "Checklist de onboarding sin supervisor asignado #005",
+          "source_url": "https://intranet.logistica.local/incidents/005",
+          "excerpt": "Titulo: Checklist de onboarding sin supervisor asignado #005\nDescripcion: Se reportó la incidencia \"Checklist de onboarding sin supervisor asignado\" en el sistema OnboardHub durante la operación del área de Onboarding. El caso se detectó en la mesa de altas de",
+          "chunk_id": 473
+        },
+        {
+          "source_type": "incident",
+          "source_id": 35,
+          "title": "Checklist de onboarding sin supervisor asignado #035",
+          "source_url": "https://intranet.logistica.local/incidents/035",
+          "excerpt": "Titulo: Checklist de onboarding sin supervisor asignado #035\nDescripcion: Se reportó la incidencia \"Checklist de onboarding sin supervisor asignado\" en el sistema OnboardHub durante la operación del área de Onboarding. El caso se detectó en la mesa de altas de",
+          "chunk_id": 515
+        }
+      ],
+      "answer": "Resumen\nComo nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habilitación de permisos en los sistemas operativos: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub y DocuFlow. Cada paso debe registrarse con trazabilidad (fecha, turno, centro, usuario responsable) y validarse por el supervisor. El proceso no se considera finalizado hasta que el dato se sincroniza en los paneles internos y listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.",
+      "fallback_text": "Resumen\nComo nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habilitación de permisos en los sistemas operativos: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub y DocuFlow. Cada paso debe registrarse con trazabilidad (fecha, turno, centro, usuario responsable) y validarse por el supervisor. El proceso no se considera finalizado hasta que el dato se sincroniza en los paneles internos y listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.\n\nFuentes consultadas\n- [1] Documento 15 - Alta de conductores y validación documental: https://intranet.logistica.local/documents/015\n- [2] Documento 16 - Checklist de bienvenida para personal de almacén: https://intranet.logistica.local/documents/016\n- [3] Incidencia 5 - Checklist de onboarding sin supervisor asignado #085: https://intranet.logistica.local/incidents/085\n- [4] Incidencia 5 - Checklist de onboarding sin supervisor asignado #005: https://intranet.logistica.local/incidents/005\n- [5] Incidencia 35 - Checklist de onboarding sin supervisor asignado #035: https://intranet.logistica.local/incidents/035\n\nIncidencias relacionadas\n- INC-S00005: Checklist de onboarding sin supervisor asignado #005 (resolved)\n- INC-S00035: Checklist de onboarding sin supervisor asignado #035 (resolved)"
+    },
+    {
+      "turn": 3,
+      "message": "creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??",
+      "elapsed_ms": 10852,
+      "conversation_id": 14,
+      "message_id": 76,
+      "needs_clarification": true,
+      "clarification_attempt": 1,
+      "should_offer_incident": false,
+      "source_count": 0,
+      "sources": [],
+      "answer": "Resumen\nNecesito aclarar la consulta antes de darte una respuesta fiable.\n\nDetalle\nPara corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos.\n\nSiguiente paso\nResponde con ese dato para continuar. Intento de aclaracion 1 de 2.",
+      "fallback_text": "Resumen\nNecesito aclarar la consulta antes de darte una respuesta fiable.\n\nDetalle\nPara corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos.\n\nSiguiente paso\nResponde con ese dato para continuar. Intento de aclaracion 1 de 2."
+    },
+    {
+      "turn": 4,
+      "message": "No encuentro solucion para un error nuevo en AlmaTrack WMS.",
+      "elapsed_ms": 4256,
+      "conversation_id": 14,
+      "message_id": 78,
+      "needs_clarification": true,
+      "clarification_attempt": 2,
+      "should_offer_incident": false,
+      "source_count": 0,
+      "sources": [],
+      "answer": "Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nEl usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclaracion 2 de 2.",
+      "fallback_text": "Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nEl usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclaracion 2 de 2."
+    }
+  ],
+  "retrieval_logs": [
+    {
+      "id": 34,
+      "message_id": 71,
+      "query": "Como se registra una entrega parcial en ventana critica en LogiCore ERP?",
+      "retrieved_chunk_ids": [
+        401,
+        410,
+        402,
+        472,
+        414
+      ],
+      "retrieved_source_ids": [
+        1,
+        4,
+        1,
+        4,
+        5
+      ],
+      "scores": {
+        "401": 1.0,
+        "402": 0.07822783447239483,
+        "410": 0.13878426793736734,
+        "414": 0.03642533796814468,
+        "472": 0.074936574054382
+      },
+      "confidence_score": 1.0,
+      "was_answered": true,
+      "latency_ms": 6149,
+      "answer": "Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del pedido y del panel de incidencias del turno, adjuntar una observación sobre la causa operativa y la hora estimada del siguiente envío. Además, se requiere que cualquier cambio en el sistema deje trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas."
+    },
+    {
+      "id": 35,
+      "message_id": 73,
+      "query": "Soy nuevo en operaciones. Que pasos de onboarding debo completar?",
+      "retrieved_chunk_ids": [
+        443,
+        446,
+        475,
+        473,
+        515
+      ],
+      "retrieved_source_ids": [
+        15,
+        16,
+        5,
+        5,
+        35
+      ],
+      "scores": {
+        "443": 0.7,
+        "446": 0.6332889286152086,
+        "473": 0.14592765122563267,
+        "475": 0.17391714725762866,
+        "515": 0.1348403723769786
+      },
+      "confidence_score": 0.7,
+      "was_answered": true,
+      "latency_ms": 6376,
+      "answer": "Resumen\nComo nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habilitación de permisos en los sistemas operativos: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub y DocuFlow. Cada paso debe registrarse con trazabilidad (fecha, turno, centro, usuario responsable) y validarse por el supervisor. El proceso no se considera finalizado hasta que el dato se sincroniza en los paneles internos y listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas."
+    },
+    {
+      "id": 36,
+      "message_id": 75,
+      "query": "creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??",
+      "retrieved_chunk_ids": [
+        446,
+        443,
+        475,
+        584,
+        515
+      ],
+      "retrieved_source_ids": [
+        16,
+        15,
+        5,
+        95,
+        35
+      ],
+      "scores": {
+        "443": 0.5094762410708211,
+        "446": 0.7,
+        "475": 0.34444886585180773,
+        "515": 0.2691832035167981,
+        "584": 0.30482267205327235
+      },
+      "confidence_score": 0.7,
+      "was_answered": false,
+      "latency_ms": 10524,
+      "answer": "Resumen\nNecesito aclarar la consulta antes de darte una respuesta fiable.\n\nDetalle\nPara corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos.\n\nSiguiente paso\nResponde con ese dato para continuar. Intento de aclaracion 1 de 2."
+    },
+    {
+      "id": 37,
+      "message_id": 77,
+      "query": "No encuentro solucion para un error nuevo en AlmaTrack WMS.",
+      "retrieved_chunk_ids": [],
+      "retrieved_source_ids": [],
+      "scores": {},
+      "confidence_score": 0.0,
+      "was_answered": false,
+      "latency_ms": 3992,
+      "answer": "Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nEl usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclaracion 2 de 2."
+    }
+  ],
+  "chunks": [
+    {
+      "id": 401,
+      "source_type": "document",
+      "source_id": 1,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "operaciones",
+          "logicore-erp"
+        ],
+        "title": "Registro de entregas parciales en ventana crítica",
+        "department": "Operaciones",
+        "source_url": "https://intranet.logistica.local/documents/001",
+        "affected_system": "LogiCore ERP"
+      },
+      "content": "Registro de entregas parciales en ventana crítica es un documento interno de Operaciones para el sistema LogiCore ERP. Describe cómo registrar expediciones parciales sin perder la promesa de servicio ni la trazabilidad del pedido cuando un camión sale con parte de la carga pendiente. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario."
+    },
+    {
+      "id": 402,
+      "source_type": "document",
+      "source_id": 1,
+      "chunk_index": 1,
+      "metadata": {
+        "tags": [
+          "operaciones",
+          "logicore-erp"
+        ],
+        "title": "Registro de entregas parciales en ventana crítica",
+        "department": "Operaciones",
+        "source_url": "https://intranet.logistica.local/documents/001",
+        "affected_system": "LogiCore ERP"
+      },
+      "content": "peración no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\nControles obligatorios: marcar los bultos expedidos y los retenidos por separado confirmar la actualización del pedido y del panel de incidencias del turno adjuntar observación sobre la causa operativa y la hora estimada del siguiente envío Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar."
+    },
+    {
+      "id": 410,
+      "source_type": "document",
+      "source_id": 4,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "operaciones",
+          "logicore-erp"
+        ],
+        "title": "Gestión de pedidos retenidos por validación manual",
+        "department": "Operaciones",
+        "source_url": "https://intranet.logistica.local/documents/004",
+        "affected_system": "LogiCore ERP"
+      },
+      "content": "Gestión de pedidos retenidos por validación manual es un documento interno de Operaciones para el sistema LogiCore ERP. Explica cómo revisar pedidos retenidos por reglas manuales de negocio antes de liberarlos al circuito de preparación y expedición. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\nEl procedimiento indica que cualquier cambio ejecutado en LogiCore ERP debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario."
+    },
+    {
+      "id": 414,
+      "source_type": "document",
+      "source_id": 5,
+      "chunk_index": 1,
+      "metadata": {
+        "tags": [
+          "operaciones",
+          "almatrack-wms"
+        ],
+        "title": "Sincronización de ubicaciones tras reasignación masiva",
+        "department": "Operaciones",
+        "source_url": "https://intranet.logistica.local/documents/005",
+        "affected_system": "AlmaTrack WMS"
+      },
+      "content": "peración no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\nControles obligatorios: comparar el inventario visible en RF y en la consola del supervisor validar que los movimientos queden reflejados en el histórico interno bloquear las tareas de picking conflictivas hasta cerrar la revisión Si alguno de los controles falla, el operador debe pausar la acción, registrar la desviación en DocuFlow o en el sistema correspondiente y notificarlo al responsable del turno antes de continuar."
+    },
+    {
+      "id": 443,
+      "source_type": "document",
+      "source_id": 15,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub"
+        ],
+        "title": "Alta de conductores y validación documental",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/documents/015",
+        "affected_system": "OnboardHub"
+      },
+      "content": "Alta de conductores y validación documental es un documento interno de Onboarding para el sistema OnboardHub. Detalla cómo dar de alta a nuevos conductores, validar licencias, cursos internos y supervisor asignado antes del primer turno. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\nEl procedimiento indica que cualquier cambio ejecutado en OnboardHub debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario."
+    },
+    {
+      "id": 446,
+      "source_type": "document",
+      "source_id": 16,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub"
+        ],
+        "title": "Checklist de bienvenida para personal de almacén",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/documents/016",
+        "affected_system": "OnboardHub"
+      },
+      "content": "Checklist de bienvenida para personal de almacén es un documento interno de Onboarding para el sistema OnboardHub. Resume los pasos de bienvenida, permisos, formación y entrega de material para nuevas incorporaciones del área de almacén. La referencia se utiliza solo dentro del entorno ficticio de la empresa y no debe compartirse fuera de los equipos de operaciones, seguridad o soporte.\nEl procedimiento indica que cualquier cambio ejecutado en OnboardHub debe dejar trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario."
+    },
+    {
+      "id": 472,
+      "source_type": "incident",
+      "source_id": 4,
+      "chunk_index": 2,
+      "metadata": {
+        "tags": [
+          "operaciones",
+          "logicore-erp",
+          "pedidos",
+          "resuelto",
+          "ciclo-9"
+        ],
+        "title": "Pedido retenido por validación manual #084",
+        "department": "Operaciones",
+        "source_url": "https://intranet.logistica.local/incidents/084",
+        "is_resolved": true,
+        "affected_system": "LogiCore ERP"
+      },
+      "content": "tervención se realizó dentro de la ventana autorizada por el supervisor y se documentó con hora de inicio, usuario responsable y referencia de cambio.\nValidación posterior: Backoffice validó que el pedido pasó a preparación, generó tareas y quedó visible en el monitor de expediciones. Tras la corrección se repitió el flujo operativo completo con datos ficticios de prueba y se confirmó que no quedaban mensajes de error, bloqueos residuales ni divergencias en los listados internos.\nImpacto: El equipo no podía enviar el pedido a preparación y la promesa de entrega empezaba a degradarse.\nComportamiento esperado: El proceso de liberación de pedido retenido debe completarse sin errores y con trazabilidad íntegra en LogiCore ERP.\nComportamiento actual: el pedido mostraba bloqueo persistente pese a tener todos los datos obligatorios confirmados"
+    },
+    {
+      "id": 473,
+      "source_type": "incident",
+      "source_id": 5,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub",
+          "altas",
+          "resuelto",
+          "ciclo-1"
+        ],
+        "title": "Checklist de onboarding sin supervisor asignado #005",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/incidents/005",
+        "is_resolved": true,
+        "affected_system": "OnboardHub"
+      },
+      "content": "Titulo: Checklist de onboarding sin supervisor asignado #005\nDescripcion: Se reportó la incidencia \"Checklist de onboarding sin supervisor asignado\" en el sistema OnboardHub durante la operación del área de Onboarding. El caso se detectó en la mesa de altas del centro sur mientras el equipo ejecutaba el proceso de alta inicial de conductor y varios usuarios observaron el expediente aparecía incompleto aunque la persona ya tenía licencia y formación registradas.\nEl impacto inicial fue el siguiente: La incorporación del nuevo conductor quedó bloqueada y no se pudo planificar su primer turno. Los coordinadores confirmaron que el problema no provenía de una plataforma externa real, sino de un flujo ficticio del entorno de demo diseñado para simular casuísticas internas de logística, seguridad y onboarding."
+    },
+    {
+      "id": 475,
+      "source_type": "incident",
+      "source_id": 5,
+      "chunk_index": 2,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub",
+          "altas",
+          "resuelto",
+          "ciclo-9"
+        ],
+        "title": "Checklist de onboarding sin supervisor asignado #085",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/incidents/085",
+        "is_resolved": true,
+        "affected_system": "OnboardHub"
+      },
+      "content": "tervención se realizó dentro de la ventana autorizada por el supervisor y se documentó con hora de inicio, usuario responsable y referencia de cambio.\nValidación posterior: Onboarding confirmó que el expediente pasó a estado listo y que el supervisor veía la incorporación en su panel. Tras la corrección se repitió el flujo operativo completo con datos ficticios de prueba y se confirmó que no quedaban mensajes de error, bloqueos residuales ni divergencias en los listados internos.\nImpacto: La incorporación del nuevo conductor quedó bloqueada y no se pudo planificar su primer turno.\nComportamiento esperado: El proceso de alta inicial de conductor debe completarse sin errores y con trazabilidad íntegra en OnboardHub.\nComportamiento actual: el expediente aparecía incompleto aunque la persona ya tenía licencia y formación registradas"
+    },
+    {
+      "id": 515,
+      "source_type": "incident",
+      "source_id": 35,
+      "chunk_index": 0,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub",
+          "altas",
+          "resuelto",
+          "ciclo-4"
+        ],
+        "title": "Checklist de onboarding sin supervisor asignado #035",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/incidents/035",
+        "is_resolved": true,
+        "affected_system": "OnboardHub"
+      },
+      "content": "Titulo: Checklist de onboarding sin supervisor asignado #035\nDescripcion: Se reportó la incidencia \"Checklist de onboarding sin supervisor asignado\" en el sistema OnboardHub durante la operación del área de Onboarding. El caso se detectó en la mesa de altas del centro sur mientras el equipo ejecutaba el proceso de alta inicial de conductor y varios usuarios observaron el expediente aparecía incompleto aunque la persona ya tenía licencia y formación registradas.\nEl impacto inicial fue el siguiente: La incorporación del nuevo conductor quedó bloqueada y no se pudo planificar su primer turno. Los coordinadores confirmaron que el problema no provenía de una plataforma externa real, sino de un flujo ficticio del entorno de demo diseñado para simular casuísticas internas de logística, seguridad y onboarding."
+    },
+    {
+      "id": 584,
+      "source_type": "incident",
+      "source_id": 95,
+      "chunk_index": 1,
+      "metadata": {
+        "tags": [
+          "onboarding",
+          "onboardhub",
+          "altas",
+          "abierto"
+        ],
+        "title": "Expediente de conductor sin cierre de onboarding #095",
+        "department": "Onboarding",
+        "source_url": "https://intranet.logistica.local/incidents/095",
+        "is_resolved": false,
+        "affected_system": "OnboardHub"
+      },
+      "content": "lataforma externa real, sino de un flujo ficticio del entorno de demo diseñado para simular casuísticas internas de logística, seguridad y onboarding.\nEn la revisión inicial se validaron permisos, colas de trabajo, reglas de negocio, estado de sincronización y registros de control asociados a OnboardHub. La evidencia quedó documentada con capturas internas, observaciones del turno y una descripción paso a paso para que el incidente pudiera indexarse después como conocimiento reutilizable.\nSistema: OnboardHub\nEstado: open\nResolucion:\nImpacto: La incorporación no se puede programar y el equipo dedica tiempo adicional a comprobaciones manuales.\nComportamiento esperado: El proceso de cierre de checklist de nuevo conductor debe mantenerse estable y responder dentro del tiempo estándar definido para OnboardHub."
+    }
+  ],
+  "conversation_memories": [
+    {
+      "id": 23,
+      "message_id": 71,
+      "role": "user",
+      "summary": "Como se registra una entrega parcial en ventana critica en LogiCore ERP?",
+      "metadata": {
+        "kind": "user_message",
+        "planner_output": {
+          "intent": "instrucción sobre registro de entrega parcial en ventana crítica en LogiCore ERP",
+          "reason": "La consulta requiere un procedimiento específico del sistema LogiCore ERP que no puede inferirse del contexto actual ni de respuestas anteriores. Se necesita acceder al índice de conocimiento para encontrar la documentación correcta.",
+          "mentioned_systems": [
+            "LogiCore ERP"
+          ],
+          "user_context_summary": "Usuario pregunta sobre un proceso específico en LogiCore ERP relacionado con entregas parciales en ventana crítica.",
+          "knowledge_index_query": "procedimiento para registrar entrega parcial en ventana crítica dentro de LogiCore ERP",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "documentación técnica de LogiCore ERP"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "mentioned_systems": [
+          "LogiCore ERP"
+        ]
+      },
+      "memory_text": "role: user\nsummary: Como se registra una entrega parcial en ventana critica en LogiCore ERP?\nsystems: LogiCore ERP\ncontent: Como se registra una entrega parcial en ventana critica en LogiCore ERP?"
+    },
+    {
+      "id": 24,
+      "message_id": 72,
+      "role": "assistant",
+      "summary": "Resumen Para registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del...",
+      "metadata": {
+        "kind": "assistant_message",
+        "source_keys": [
+          "document:1",
+          "document:4",
+          "document:1",
+          "incident:4",
+          "document:5"
+        ],
+        "planner_output": {
+          "intent": "instrucción sobre registro de entrega parcial en ventana crítica en LogiCore ERP",
+          "reason": "La consulta requiere un procedimiento específico del sistema LogiCore ERP que no puede inferirse del contexto actual ni de respuestas anteriores. Se necesita acceder al índice de conocimiento para encontrar la documentación correcta.",
+          "mentioned_systems": [
+            "LogiCore ERP"
+          ],
+          "user_context_summary": "Usuario pregunta sobre un proceso específico en LogiCore ERP relacionado con entregas parciales en ventana crítica.",
+          "knowledge_index_query": "procedimiento para registrar entrega parcial en ventana crítica dentro de LogiCore ERP",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "documentación técnica de LogiCore ERP"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "needs_clarification": false,
+        "should_offer_incident": false
+      },
+      "memory_text": "role: assistant\nsummary: Resumen Para registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del...\nsources: document:1, document:4, document:1, incident:4, document:5\ncontent: Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del pedido y del panel de incidencias del turno, adjuntar una observación sobre la causa operativa y la hora estimada del siguiente envío. Además, se requiere que cualquier cambio en el sistema deje trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas."
+    },
+    {
+      "id": 25,
+      "message_id": 73,
+      "role": "user",
+      "summary": "Soy nuevo en operaciones. Que pasos de onboarding debo completar?",
+      "metadata": {
+        "kind": "user_message",
+        "planner_output": {
+          "intent": "onboarding_guidance",
+          "reason": "El usuario es nuevo en operaciones y pregunta sobre los pasos de onboarding, lo que requiere acceso a documentación interna específica sobre el proceso de integración, incluyendo sistemas, formularios y validaciones. No se puede responder solo con el historial de conversación.",
+          "mentioned_systems": [
+            "LogiCore ERP",
+            "RutaNexo",
+            "AlmaTrack WMS",
+            "SafeGate",
+            "OnboardHub",
+            "DocuFlow"
+          ],
+          "user_context_summary": "Usuario es nuevo en operaciones y busca conocer los pasos de onboarding necesarios para integrarse al sistema.",
+          "knowledge_index_query": "Obtener el procedimiento completo de onboarding para nuevos operadores en el sistema de operaciones, incluyendo formularios, capacitaciones, sistemas a utilizar (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow) y validaciones requeridas.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "Recuperar el contexto de la conversación anterior sobre el registro de entregas parciales en LogiCore ERP.",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "procedimientos_internos_operaciones",
+            "documentos_de_onboarding",
+            "capacitacion_operativa"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "mentioned_systems": [
+          "LogiCore ERP",
+          "RutaNexo",
+          "AlmaTrack WMS",
+          "SafeGate",
+          "OnboardHub",
+          "DocuFlow"
+        ]
+      },
+      "memory_text": "role: user\nsummary: Soy nuevo en operaciones. Que pasos de onboarding debo completar?\nsystems: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow\ncontent: Soy nuevo en operaciones. Que pasos de onboarding debo completar?"
+    },
+    {
+      "id": 26,
+      "message_id": 74,
+      "role": "assistant",
+      "summary": "Resumen Como nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habil...",
+      "metadata": {
+        "kind": "assistant_message",
+        "source_keys": [
+          "document:15",
+          "document:16",
+          "incident:5",
+          "incident:5",
+          "incident:35"
+        ],
+        "planner_output": {
+          "intent": "onboarding_guidance",
+          "reason": "El usuario es nuevo en operaciones y pregunta sobre los pasos de onboarding, lo que requiere acceso a documentación interna específica sobre el proceso de integración, incluyendo sistemas, formularios y validaciones. No se puede responder solo con el historial de conversación.",
+          "mentioned_systems": [
+            "LogiCore ERP",
+            "RutaNexo",
+            "AlmaTrack WMS",
+            "SafeGate",
+            "OnboardHub",
+            "DocuFlow"
+          ],
+          "user_context_summary": "Usuario es nuevo en operaciones y busca conocer los pasos de onboarding necesarios para integrarse al sistema.",
+          "knowledge_index_query": "Obtener el procedimiento completo de onboarding para nuevos operadores en el sistema de operaciones, incluyendo formularios, capacitaciones, sistemas a utilizar (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow) y validaciones requeridas.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "Recuperar el contexto de la conversación anterior sobre el registro de entregas parciales en LogiCore ERP.",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "procedimientos_internos_operaciones",
+            "documentos_de_onboarding",
+            "capacitacion_operativa"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "needs_clarification": false,
+        "should_offer_incident": false
+      },
+      "memory_text": "role: assistant\nsummary: Resumen Como nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habil...\nsources: document:15, document:16, incident:5, incident:5, incident:35\ncontent: Resumen\nComo nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habilitación de permisos en los sistemas operativos: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub y DocuFlow. Cada paso debe registrarse con trazabilidad (fecha, turno, centro, usuario responsable) y validarse por el supervisor. El proceso no se considera finalizado hasta que el dato se sincroniza en los paneles internos y listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas."
+    },
+    {
+      "id": 27,
+      "message_id": 75,
+      "role": "user",
+      "summary": "creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??",
+      "metadata": {
+        "kind": "user_message",
+        "planner_output": {
+          "intent": "question_answering",
+          "reason": "El usuario ha indicado que la respuesta anterior no es suficiente, lo que sugiere que necesita una versión más detallada, estructurada o paso a paso del proceso de iniciación. Dado que ya se ha abordado el tema en el historial, se requiere acceder a información más específica del índice de conocimiento para proporcionar una respuesta completa, además de mantener el contexto de la conversación.",
+          "mentioned_systems": [
+            "OnboardHub",
+            "LogiCore ERP",
+            "RutaNexo",
+            "AlmaTrack WMS",
+            "SafeGate",
+            "DocuFlow"
+          ],
+          "user_context_summary": "Nuevo operador en el equipo de operaciones que necesita una guía más completa y estructurada del proceso de iniciación, tras recibir una respuesta general que no considera suficiente.",
+          "knowledge_index_query": "Procedimiento detallado de onboarding para nuevos operadores en logística, incluyendo secuencia de pasos, responsables, sistemas involucrados, validaciones requeridas, trazabilidad, y cierre del proceso con sincronización en paneles internos y listados diarios.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "El usuario es nuevo en el equipo de operaciones y ha preguntado sobre el proceso de onboarding. Ya se le proporcionó una respuesta general que incluye alta en OnboardHub, validación de documentación, entrega de material, formación, habilitación de permisos en sistemas (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow), y validación supervisora con trazabilidad. Ahora indica que la respuesta no es suficiente y pide pasos de iniciación más detallados.",
+          "needs_conversation_memory": true,
+          "expected_source_preference": [
+            "procedimientos internos de onboarding",
+            "documentos de formación para nuevos operadores",
+            "flujos de alta en OnboardHub y habilitación de sistemas"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "mentioned_systems": [
+          "OnboardHub",
+          "LogiCore ERP",
+          "RutaNexo",
+          "AlmaTrack WMS",
+          "SafeGate",
+          "DocuFlow"
+        ]
+      },
+      "memory_text": "role: user\nsummary: creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??\nsystems: OnboardHub, LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, DocuFlow\ncontent: creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??"
+    },
+    {
+      "id": 28,
+      "message_id": 76,
+      "role": "assistant",
+      "summary": "Resumen Necesito aclarar la consulta antes de darte una respuesta fiable. Detalle Para corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos. Siguiente paso Respon...",
+      "metadata": {
+        "kind": "assistant_message",
+        "source_keys": [],
+        "planner_output": {
+          "intent": "question_answering",
+          "reason": "El usuario ha indicado que la respuesta anterior no es suficiente, lo que sugiere que necesita una versión más detallada, estructurada o paso a paso del proceso de iniciación. Dado que ya se ha abordado el tema en el historial, se requiere acceder a información más específica del índice de conocimiento para proporcionar una respuesta completa, además de mantener el contexto de la conversación.",
+          "mentioned_systems": [
+            "OnboardHub",
+            "LogiCore ERP",
+            "RutaNexo",
+            "AlmaTrack WMS",
+            "SafeGate",
+            "DocuFlow"
+          ],
+          "user_context_summary": "Nuevo operador en el equipo de operaciones que necesita una guía más completa y estructurada del proceso de iniciación, tras recibir una respuesta general que no considera suficiente.",
+          "knowledge_index_query": "Procedimiento detallado de onboarding para nuevos operadores en logística, incluyendo secuencia de pasos, responsables, sistemas involucrados, validaciones requeridas, trazabilidad, y cierre del proceso con sincronización en paneles internos y listados diarios.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "El usuario es nuevo en el equipo de operaciones y ha preguntado sobre el proceso de onboarding. Ya se le proporcionó una respuesta general que incluye alta en OnboardHub, validación de documentación, entrega de material, formación, habilitación de permisos en sistemas (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow), y validación supervisora con trazabilidad. Ahora indica que la respuesta no es suficiente y pide pasos de iniciación más detallados.",
+          "needs_conversation_memory": true,
+          "expected_source_preference": [
+            "procedimientos internos de onboarding",
+            "documentos de formación para nuevos operadores",
+            "flujos de alta en OnboardHub y habilitación de sistemas"
+          ],
+          "should_ask_clarification_first": false,
+          "can_answer_from_conversation_only": false
+        },
+        "needs_clarification": true,
+        "should_offer_incident": false
+      },
+      "memory_text": "role: assistant\nsummary: Resumen Necesito aclarar la consulta antes de darte una respuesta fiable. Detalle Para corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos. Siguiente paso Respon...\nflags: needs_clarification\ncontent: Resumen\nNecesito aclarar la consulta antes de darte una respuesta fiable.\n\nDetalle\nPara corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos.\n\nSiguiente paso\nResponde con ese dato para continuar. Intento de aclaracion 1 de 2."
+    },
+    {
+      "id": 29,
+      "message_id": 77,
+      "role": "user",
+      "summary": "No encuentro solucion para un error nuevo en AlmaTrack WMS.",
+      "metadata": {
+        "kind": "user_message",
+        "planner_output": {
+          "intent": "question_answering",
+          "reason": "El usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.",
+          "mentioned_systems": [
+            "AlmaTrack WMS"
+          ],
+          "user_context_summary": "Nuevo operador en logística que busca orientación sobre el proceso de iniciación, pero no ha especificado el sistema o paso concreto que requiere. Ya se le ha ofrecido información general sobre el onboarding, pero la consulta actual indica que necesita una respuesta más precisa.",
+          "knowledge_index_query": "Procedimientos de onboarding para nuevos operadores en logística, incluyendo alta en sistemas operativos (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow), validación de documentación, formación, asignación de supervisor y habilitación de permisos.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "El usuario es nuevo en operaciones y ha preguntado sobre el proceso de onboarding, específicamente sobre los pasos de iniciación. Ya se le proporcionó una respuesta general sobre el onboarding, pero no se ha confirmado si necesita información sobre un sistema específico.",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "Documento interno de Procedimientos de Onboarding"
+          ],
+          "should_ask_clarification_first": true,
+          "can_answer_from_conversation_only": false
+        },
+        "mentioned_systems": [
+          "AlmaTrack WMS"
+        ]
+      },
+      "memory_text": "role: user\nsummary: No encuentro solucion para un error nuevo en AlmaTrack WMS.\nsystems: AlmaTrack WMS\ncontent: No encuentro solucion para un error nuevo en AlmaTrack WMS."
+    },
+    {
+      "id": 30,
+      "message_id": 78,
+      "role": "assistant",
+      "summary": "Resumen Necesito aclarar la consulta antes de buscar informacion. Detalle El usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro d...",
+      "metadata": {
+        "kind": "assistant_message",
+        "source_keys": [],
+        "planner_output": {
+          "intent": "question_answering",
+          "reason": "El usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.",
+          "mentioned_systems": [
+            "AlmaTrack WMS"
+          ],
+          "user_context_summary": "Nuevo operador en logística que busca orientación sobre el proceso de iniciación, pero no ha especificado el sistema o paso concreto que requiere. Ya se le ha ofrecido información general sobre el onboarding, pero la consulta actual indica que necesita una respuesta más precisa.",
+          "knowledge_index_query": "Procedimientos de onboarding para nuevos operadores en logística, incluyendo alta en sistemas operativos (LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub, DocuFlow), validación de documentación, formación, asignación de supervisor y habilitación de permisos.",
+          "needs_knowledge_index": true,
+          "conversation_memory_query": "El usuario es nuevo en operaciones y ha preguntado sobre el proceso de onboarding, específicamente sobre los pasos de iniciación. Ya se le proporcionó una respuesta general sobre el onboarding, pero no se ha confirmado si necesita información sobre un sistema específico.",
+          "needs_conversation_memory": false,
+          "expected_source_preference": [
+            "Documento interno de Procedimientos de Onboarding"
+          ],
+          "should_ask_clarification_first": true,
+          "can_answer_from_conversation_only": false
+        },
+        "needs_clarification": true,
+        "should_offer_incident": false
+      },
+      "memory_text": "role: assistant\nsummary: Resumen Necesito aclarar la consulta antes de buscar informacion. Detalle El usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro d...\nflags: needs_clarification\ncontent: Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nEl usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclaracion 2 de 2."
+    }
+  ],
+  "conversation_id": 14,
+  "messages": [
+    {
+      "id": 71,
+      "role": "user",
+      "intent": "question_answering",
+      "content": "Como se registra una entrega parcial en ventana critica en LogiCore ERP?",
+      "created_at": "2026-05-08T17:32:49.809413+02:00"
+    },
+    {
+      "id": 72,
+      "role": "assistant",
+      "intent": "question_answering",
+      "content": "Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, se debe seguir el procedimiento descrito en el documento interno de Operaciones (chunk_id=401). Este incluye: marcar los bultos expedidos y los retenidos por separado, confirmar la actualización del pedido y del panel de incidencias del turno, adjuntar una observación sobre la causa operativa y la hora estimada del siguiente envío. Además, se requiere que cualquier cambio en el sistema deje trazabilidad operativa con fecha, turno, almacén o centro afectado, usuario responsable y validación posterior por parte del rol supervisor. La operación no se considera cerrada hasta confirmar que el dato final quedó sincronizado en los paneles internos y en los listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.",
+      "created_at": "2026-05-08T17:32:49.809413+02:00"
+    },
+    {
+      "id": 73,
+      "role": "user",
+      "intent": "question_answering",
+      "content": "Soy nuevo en operaciones. Que pasos de onboarding debo completar?",
+      "created_at": "2026-05-08T17:32:55.941697+02:00"
+    },
+    {
+      "id": 74,
+      "role": "assistant",
+      "intent": "question_answering",
+      "content": "Resumen\nComo nuevo operador en logística, debes completar el proceso de onboarding que incluye la alta en OnboardHub, validación de documentación (licencia, cursos internos) y asignación de un supervisor. Además, se requiere la entrega de material, formación específica y habilitación de permisos en los sistemas operativos: LogiCore ERP, RutaNexo, AlmaTrack WMS, SafeGate, OnboardHub y DocuFlow. Cada paso debe registrarse con trazabilidad (fecha, turno, centro, usuario responsable) y validarse por el supervisor. El proceso no se considera finalizado hasta que el dato se sincroniza en los paneles internos y listados de seguimiento diario.\n\nSiguiente paso\nSi quieres, puedo ampliar el procedimiento o revisar las incidencias relacionadas.",
+      "created_at": "2026-05-08T17:32:55.941697+02:00"
+    },
+    {
+      "id": 75,
+      "role": "user",
+      "intent": "question_answering",
+      "content": "creo que esa respuesta no me vale. me podr?as indicar mejor que pasos de iniciacion debo seguir teniendo en cuenta que soy nuevo en el equipo de operaciones??",
+      "created_at": "2026-05-08T17:33:02.587138+02:00"
+    },
+    {
+      "id": 76,
+      "role": "assistant",
+      "intent": "question_answering",
+      "content": "Resumen\nNecesito aclarar la consulta antes de darte una respuesta fiable.\n\nDetalle\nPara corregir la respuesta necesito que concretes el sistema o proceso exacto. Por ejemplo: OnboardHub para alta inicial, SafeGate para permisos o LogiCore ERP para pedidos.\n\nSiguiente paso\nResponde con ese dato para continuar. Intento de aclaracion 1 de 2.",
+      "created_at": "2026-05-08T17:33:02.587138+02:00"
+    },
+    {
+      "id": 77,
+      "role": "user",
+      "intent": "question_answering",
+      "content": "No encuentro solucion para un error nuevo en AlmaTrack WMS.",
+      "created_at": "2026-05-08T17:33:13.439119+02:00"
+    },
+    {
+      "id": 78,
+      "role": "assistant",
+      "intent": "question_answering",
+      "content": "Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nEl usuario menciona un error específico en AlmaTrack WMS, pero no proporciona detalles sobre el tipo de error, el contexto o el paso del proceso donde ocurre. Dado que el sistema mencionado está dentro de los permitidos y se requiere información específica para resolver el error, se debe pedir aclaración antes de acceder al conocimiento indexado.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclaracion 2 de 2.",
+      "created_at": "2026-05-08T17:33:13.439119+02:00"
+    }
+  ]
+}

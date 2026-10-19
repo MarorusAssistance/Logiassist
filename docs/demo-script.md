@@ -19,7 +19,7 @@
 Ten a mano:
 
 - la consola o terminal con los health checks en verde
-- una ventana con `/api/chat` o Teams
+- una ventana con `/demo`, `/api/chat` o Teams
 - un reporte RAG reciente en `evaluation/reports/`
 - si es cloud, el paquete de Teams ya cargado
 
@@ -27,7 +27,7 @@ Ten a mano:
 
 1. Explica en una frase el problema:
    - documentacion y tickets internos dispersos
-2. Haz una pregunta conocida con fuentes.
+2. Abre `/demo`, pulsa `Comprobar` y haz una pregunta conocida con fuentes.
 3. Haz una pregunta ambigua para forzar aclaracion.
 4. Cierra con el flujo de incidencia no resuelta.
 5. Ensena un reporte de evaluacion RAG y una frase sobre hit@k / citation coverage.
@@ -86,6 +86,7 @@ Ten a mano:
 ## Que pantallas conviene ensenar
 
 - README principal
+- consola web `/demo`
 - conversacion resuelta con fuentes
 - caso de aclaracion
 - confirmacion de ticket creado

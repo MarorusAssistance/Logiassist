@@ -12,11 +12,15 @@ DATA_DIR = ROOT / "data"
 
 ALLOWED_SYSTEMS = [
     "LogiCore ERP",
-    "RutaNexo",
     "AlmaTrack WMS",
-    "SafeGate",
-    "OnboardHub",
+    "RutaNexo TMS",
+    "HelpOps",
     "DocuFlow",
+    "OnboardHub",
+    "SafeGate",
+    "QualiTrace QMS",
+    "ScanBridge IDP",
+    "OpsLake",
 ]
 ALLOWED_DOCUMENT_DISTRIBUTION = {
     "Operaciones": 8,
@@ -970,3 +974,16 @@ def validate_seed_data(tickets: list[dict], documents: list[dict]) -> SeedDataSu
 def validate_seed_files(data_dir: Path = DATA_DIR) -> SeedDataSummary:
     tickets, documents = load_seed_data(data_dir)
     return validate_seed_data(tickets, documents)
+
+
+# The checked-in JSON files are the canonical synthetic corpus.  These helper
+# names are kept for tests and tooling compatibility without regenerating the
+# older templated corpus.
+def build_seed_tickets() -> list[dict]:
+    tickets, _ = load_seed_data(DATA_DIR)
+    return tickets
+
+
+def build_seed_documents() -> list[dict]:
+    _, documents = load_seed_data(DATA_DIR)
+    return documents

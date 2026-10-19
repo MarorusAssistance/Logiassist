@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+from queue import Queue
 import sys
+from threading import Thread
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -9,7 +12,8 @@ from botbuilder.core import ActivityHandler, BotFrameworkAdapter, BotFrameworkAd
 from botbuilder.schema import Activity, ActivityTypes
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -24,7 +28,8 @@ if SRC_ROOT.exists() and str(SRC_ROOT) not in sys.path:
 from internal_assistant.chat import ChatService
 from internal_assistant.config import get_settings
 from internal_assistant.db import get_session, session_scope
-from internal_assistant.observability import configure_logging, get_logger
+from internal_assistant.observability import configure_logging, get_logger, start_span
+from internal_assistant.observability.tracing import set_span_attributes, user_hash
 from internal_assistant.repositories import DocumentRepository, IncidentRepository
 from internal_assistant.runtime import assert_runtime_settings, build_health_report
 from internal_assistant.schemas import ChatRequest, ChatResponse, DocumentRead, FeedbackCreate, IncidentRead
@@ -33,6 +38,7 @@ from internal_assistant.teams import coerce_activity_input
 configure_logging()
 settings = get_settings()
 logger = get_logger(__name__)
+STATIC_ROOT = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -42,6 +48,9 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="internal-assistant-mvp", version="0.1.0", lifespan=lifespan)
+if STATIC_ROOT.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
+
 adapter = BotFrameworkAdapter(
     BotFrameworkAdapterSettings(
         settings.microsoft_app_id,
@@ -109,6 +118,16 @@ adapter.on_turn_error = on_turn_error
 DbSession = Annotated[Session, Depends(get_session)]
 
 
+@app.get("/", include_in_schema=False)
+def demo_index() -> FileResponse:
+    return FileResponse(STATIC_ROOT / "index.html")
+
+
+@app.get("/demo", include_in_schema=False)
+def demo_ui() -> FileResponse:
+    return FileResponse(STATIC_ROOT / "index.html")
+
+
 @app.get("/api/health")
 def health(session: DbSession) -> dict:
     session.execute(text("SELECT 1"))
@@ -123,8 +142,84 @@ def health_deep(session: DbSession) -> JSONResponse:
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest, session: DbSession) -> ChatResponse:
-    service = ChatService(session)
-    return service.handle_chat(payload)
+    with start_span(
+        "api.chat",
+        {
+            "channel": payload.channel,
+            "conversation_id": payload.conversation_id or 0,
+            "user_id_hash": user_hash(payload.user_id),
+            "message.length": len(payload.message),
+        },
+    ) as span:
+        service = ChatService(session)
+        response = service.handle_chat(payload)
+        set_span_attributes(
+            span,
+            {
+                "response.conversation_id": response.conversation_id,
+                "response.message_id": response.message_id or 0,
+                "response.answer_length": len(response.answer),
+                "response.source_count": len(response.sources),
+                "response.needs_clarification": response.needs_clarification,
+            },
+        )
+        return response
+
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@app.post("/api/chat/stream")
+def chat_stream(payload: ChatRequest) -> StreamingResponse:
+    def events():
+        event_queue: Queue[tuple[str, dict] | None] = Queue()
+
+        def push_token(text: str) -> None:
+            event_queue.put(("token", {"text": text}))
+
+        def worker() -> None:
+            try:
+                with session_scope() as session:
+                    service = ChatService(session)
+                    response = service.handle_chat(payload, stream_token_callback=push_token)
+                response_payload = response.model_dump()
+                event_queue.put(
+                    (
+                        "sources",
+                        {
+                            "sources": [source.model_dump() for source in response.sources],
+                            "related_incidents": response.related_incidents,
+                        },
+                    )
+                )
+                event_queue.put(("final", response_payload))
+            except Exception as exc:
+                logger.exception("Streaming chat failed: %s", exc)
+                event_queue.put(
+                    (
+                        "error",
+                        {
+                            "message": "No se pudo completar la respuesta en streaming. Prueba de nuevo o usa /api/chat.",
+                        },
+                    )
+                )
+            finally:
+                event_queue.put(None)
+
+        Thread(target=worker, daemon=True).start()
+        while True:
+            item = event_queue.get()
+            if item is None:
+                break
+            event_name, event_payload = item
+            yield _sse_event(event_name, event_payload)
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/messages")

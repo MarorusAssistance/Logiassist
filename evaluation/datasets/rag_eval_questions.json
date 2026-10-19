@@ -1,7 +1,7 @@
 [
   {
     "id": "eval-001",
-    "question": "Como se registran entregas parciales en ventana critica en LogiCore ERP",
+    "question": "Como cierro una expedicion en AlmaTrack WMS si quedan bultos retenidos en muelle",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -10,9 +10,9 @@
     "expected_source_ids": [
       "document:1"
     ],
-    "expected_answer_summary": "Debe explicar el registro parcial con trazabilidad y separacion entre bultos expedidos y retenidos.",
+    "expected_answer_summary": "Debe explicar cierre de expedicion, bultos leidos, excepcion y seguimiento.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -21,7 +21,7 @@
   },
   {
     "id": "eval-002",
-    "question": "Si un pedido parcial queda bloqueado mas de diez minutos, a quien se escala en LogiCore ERP",
+    "question": "Que controles impiden cerrar una expedicion en AlmaTrack WMS con tareas RF abiertas",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -30,9 +30,9 @@
     "expected_source_ids": [
       "document:1"
     ],
-    "expected_answer_summary": "Debe indicar el escalado a soporte funcional de LogiCore ERP.",
+    "expected_answer_summary": "Debe indicar que no se cierra si existen tareas RF abiertas.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -41,7 +41,7 @@
   },
   {
     "id": "eval-003",
-    "question": "No puedo recalcular una ruta por cierre de carretera en RutaNexo, que reviso primero",
+    "question": "Que hago ante una diferencia de stock en conteo ciclico de AlmaTrack WMS",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -50,9 +50,9 @@
     "expected_source_ids": [
       "document:2"
     ],
-    "expected_answer_summary": "Debe mencionar restricciones de vehiculo y conductor y validacion de ventanas.",
+    "expected_answer_summary": "Debe aislar ubicacion, contar fisico/reservado/transito y aprobar ajuste.",
     "must_include_terms": [
-      "RutaNexo"
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -61,18 +61,19 @@
   },
   {
     "id": "eval-004",
-    "question": "Cuando RutaNexo no publica una nueva secuencia valida, que paso operativo toca",
+    "question": "Cuando una diferencia de stock se repite en dos conteos, cual es el escalado",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:2"
+      "document:2",
+      "document:11"
     ],
-    "expected_answer_summary": "Debe abrir incidencia de prioridad alta y avisar al coordinador regional.",
+    "expected_answer_summary": "Debe escalar a reconciliacion ERP-WMS.",
     "must_include_terms": [
-      "RutaNexo"
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -81,7 +82,7 @@
   },
   {
     "id": "eval-005",
-    "question": "Que controles debo aplicar si hay diferencia de inventario en un conteo ciclico en AlmaTrack WMS",
+    "question": "No puedo recalcular una ruta por cierre de carretera en RutaNexo TMS, que reviso primero",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -90,9 +91,9 @@
     "expected_source_ids": [
       "document:3"
     ],
-    "expected_answer_summary": "Debe hablar de cuarentena de ubicacion y comparacion de stock fisico, reservado y en transito.",
+    "expected_answer_summary": "Debe revisar ventanas, restricciones de vehiculo/conductor y transportista.",
     "must_include_terms": [
-      "AlmaTrack WMS"
+      "RutaNexo TMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -101,7 +102,7 @@
   },
   {
     "id": "eval-006",
-    "question": "En AlmaTrack WMS, cuando puedo cerrar una diferencia de inventario detectada en conteo ciclico",
+    "question": "Cuando RutaNexo TMS no publica una nueva secuencia valida, que paso operativo toca",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -110,9 +111,9 @@
     "expected_source_ids": [
       "document:3"
     ],
-    "expected_answer_summary": "Debe indicar que solo con aprobacion del supervisor asignado.",
+    "expected_answer_summary": "Debe abrir ticket critico en HelpOps con ruta y centro.",
     "must_include_terms": [
-      "AlmaTrack WMS"
+      "RutaNexo TMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -130,7 +131,7 @@
     "expected_source_ids": [
       "document:4"
     ],
-    "expected_answer_summary": "Debe indicar la revision de direccion, ventana y observaciones del cliente.",
+    "expected_answer_summary": "Debe identificar regla de retencion, validar datos y liberar o devolver con motivo.",
     "must_include_terms": [
       "LogiCore ERP"
     ],
@@ -141,18 +142,19 @@
   },
   {
     "id": "eval-008",
-    "question": "Si un pedido retenido tiene posibles duplicidades o bloqueo de credito ficticio, que debo revisar",
+    "question": "Si LogiCore ERP y AlmaTrack WMS muestran stock distinto, como se reconcilia",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:4"
+      "document:11"
     ],
-    "expected_answer_summary": "Debe revisar duplicidad de lineas y bloqueos de credito ficticios.",
+    "expected_answer_summary": "Debe comparar disponible, reservado, transito y ultimo movimiento en ambos sistemas.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "LogiCore ERP",
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -161,18 +163,18 @@
   },
   {
     "id": "eval-009",
-    "question": "Tras una reasignacion masiva de ubicaciones en AlmaTrack WMS, que validaciones se hacen",
+    "question": "Como valido documentos escaneados de POD o CMR en ScanBridge IDP",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:5"
+      "document:8"
     ],
-    "expected_answer_summary": "Debe comparar visibilidad RF y consola, historico y bloqueo de tareas conflictivas.",
+    "expected_answer_summary": "Debe revisar imagen, comparar campos y marcar dudas para revision manual.",
     "must_include_terms": [
-      "AlmaTrack WMS"
+      "ScanBridge IDP"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -181,16 +183,57 @@
   },
   {
     "id": "eval-010",
-    "question": "Si la sincronizacion de ubicaciones no converge en dos intentos en AlmaTrack WMS, que hago",
+    "question": "Que hago si falta POD o el CMR es ilegible al cerrar una ruta",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:5"
+      "document:9",
+      "document:8"
     ],
-    "expected_answer_summary": "Debe notificar al responsable de WMS.",
+    "expected_answer_summary": "Debe dejar ruta en revision y usar ScanBridge IDP si el justificante no es legible.",
+    "must_include_terms": [
+      "RutaNexo TMS"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-011",
+    "question": "Como se bloquea un lote por calidad antes de que salga a expedicion",
+    "category": "operaciones",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:10"
+    ],
+    "expected_answer_summary": "Debe bloquear lote y ubicaciones, registrar motivo y liberar solo con dictamen.",
+    "must_include_terms": [
+      "QualiTrace QMS"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-012",
+    "question": "Como se registra una recepcion de mercancia en AlmaTrack WMS cuando la documentacion esta parcial",
+    "category": "operaciones",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:12"
+    ],
+    "expected_answer_summary": "Debe registrar llegada, validar referencia, contar bultos y dejar en revision si procede.",
     "must_include_terms": [
       "AlmaTrack WMS"
     ],
@@ -200,59 +243,19 @@
     "follow_up_messages": []
   },
   {
-    "id": "eval-011",
-    "question": "Como se activa el plan alternativo cuando cae una integracion y dependemos de DocuFlow",
-    "category": "operaciones",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:6"
-    ],
-    "expected_answer_summary": "Debe trabajar sobre la version vigente del documento y reconciliar manualmente los movimientos.",
-    "must_include_terms": [
-      "DocuFlow"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-012",
-    "question": "Que pasa si una contingencia por caida de integracion dura mas de treinta minutos",
-    "category": "operaciones",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:6"
-    ],
-    "expected_answer_summary": "Debe escalarse a continuidad operativa.",
-    "must_include_terms": [
-      "DocuFlow"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
     "id": "eval-013",
-    "question": "Que controles hay que seguir para cerrar una expedicion con incidencias de ultima milla en RutaNexo",
+    "question": "Que hago con una devolucion de cliente antes de reincorporar producto a stock",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:7"
+      "document:13"
     ],
-    "expected_answer_summary": "Debe registrar motivo de cierre excepcional, notificar backoffice y actualizar ETA interno.",
+    "expected_answer_summary": "Debe crear expediente, clasificar motivo y enviar a revision/calidad.",
     "must_include_terms": [
-      "RutaNexo"
+      "LogiCore ERP"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -261,18 +264,19 @@
   },
   {
     "id": "eval-014",
-    "question": "Como se controlan los pedidos intercentro para evitar estados contradictorios en LogiCore ERP",
+    "question": "Como se clasifica una incidencia por transportista con POD pendiente",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:8"
+      "document:16",
+      "document:9"
     ],
-    "expected_answer_summary": "Debe comprobar origen, transito y destino en el mismo hilo operativo.",
+    "expected_answer_summary": "Debe registrar transportista, ruta, causa y documento asociado.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "RutaNexo TMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -281,18 +285,18 @@
   },
   {
     "id": "eval-015",
-    "question": "Si hay divergencia entre centros en un pedido intercentro, a quien se escala",
+    "question": "Como ejecuto inventario ciclico sin interrumpir oleadas criticas",
     "category": "operaciones",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:8"
+      "document:17"
     ],
-    "expected_answer_summary": "Debe escalarse al coordinador de red logistica.",
+    "expected_answer_summary": "Debe bloquear ubicaciones, asignar contador/revisor y resolver diferencias antes de liberar.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "AlmaTrack WMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -308,9 +312,10 @@
       "document"
     ],
     "expected_source_ids": [
-      "document:9"
+      "document:5",
+      "document:14"
     ],
-    "expected_answer_summary": "Debe validar responsable interno, zona permitida y hora de caducidad.",
+    "expected_answer_summary": "Debe comprobar rol/responsable, zona, horario, caducidad y revocacion.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -321,16 +326,17 @@
   },
   {
     "id": "eval-017",
-    "question": "Cuando hay que revocar una credencial temporal de visita tecnica en SafeGate",
+    "question": "Cuando hay que revocar una credencial temporal en SafeGate",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:9"
+      "document:5",
+      "document:14"
     ],
-    "expected_answer_summary": "Debe revocarse al cerrar la intervencion o al terminar el turno.",
+    "expected_answer_summary": "Debe revocarse al terminar relacion, servicio o caducidad.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -341,16 +347,16 @@
   },
   {
     "id": "eval-018",
-    "question": "Que se revisa en un permiso especial para turno nocturno en SafeGate",
+    "question": "Que limites tiene un permiso temporal para personal externo",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:10"
+      "document:14"
     ],
-    "expected_answer_summary": "Debe revisar fecha, turno, supervisor, doble factor y grupo de acceso.",
+    "expected_answer_summary": "Debe indicar alcance minimo, caducidad y revocacion.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -361,16 +367,16 @@
   },
   {
     "id": "eval-019",
-    "question": "Si se repiten accesos fallidos en SafeGate durante la noche, como se escala",
+    "question": "Si un proveedor no devuelve la credencial al cerrar el servicio, que procede",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:10"
+      "document:14"
     ],
-    "expected_answer_summary": "Debe derivarse a investigacion interna de Seguridad.",
+    "expected_answer_summary": "Debe bloquear o revocar y revisar el expediente interno.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -381,18 +387,18 @@
   },
   {
     "id": "eval-020",
-    "question": "Que politica aplica si se detectan credenciales compartidas en SafeGate",
+    "question": "Como se escala una incidencia critica que bloquea expediciones en HelpOps",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:11"
+      "document:6"
     ],
-    "expected_answer_summary": "Debe bloquearse preventivamente y forzar renovacion de credenciales.",
+    "expected_answer_summary": "Debe registrar sintoma, sistema, centro, prioridad e informar a responsable de guardia.",
     "must_include_terms": [
-      "SafeGate"
+      "HelpOps"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -401,18 +407,18 @@
   },
   {
     "id": "eval-021",
-    "question": "Ante un indicio de uso simultaneo de credenciales, que evidencias hay que documentar",
+    "question": "Puede cerrarse un ticket critico en HelpOps sin evidencia de recuperacion",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:11"
+      "document:6"
     ],
-    "expected_answer_summary": "Debe documentar usuario, hora y zona afectada.",
+    "expected_answer_summary": "Debe indicar que no se cierra sin evidencia de recuperacion.",
     "must_include_terms": [
-      "SafeGate"
+      "HelpOps"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -421,18 +427,18 @@
   },
   {
     "id": "eval-022",
-    "question": "Como se revisan bitacoras de acceso publicadas en DocuFlow",
+    "question": "Que controles se aplican si QualiTrace QMS bloquea un lote por embalaje da?ado",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:12"
+      "document:10"
     ],
-    "expected_answer_summary": "Debe usar la version vigente y anotar discrepancias entre evento observado y registrado.",
+    "expected_answer_summary": "Debe bloquear ubicaciones asociadas, registrar dictamen y no mover a expedicion.",
     "must_include_terms": [
-      "DocuFlow"
+      "QualiTrace QMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -441,18 +447,18 @@
   },
   {
     "id": "eval-023",
-    "question": "Si la bitacora no cuadra con el evento fisico, que escalado corresponde",
+    "question": "Si un lote bloqueado afecta pedidos preparados, que coordinacion hace operaciones",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:12"
+      "document:10"
     ],
-    "expected_answer_summary": "Debe elevarse a investigacion interna y soporte funcional.",
+    "expected_answer_summary": "Debe coordinar sustitucion antes de cerrar expedicion.",
     "must_include_terms": [
-      "DocuFlow"
+      "QualiTrace QMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -461,16 +467,19 @@
   },
   {
     "id": "eval-024",
-    "question": "Como se custodian las credenciales de proveedores recurrentes en SafeGate",
+    "question": "Que debe revisar seguridad si se repiten accesos denegados de turno nocturno",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
-      "document"
+      "document",
+      "incident"
     ],
     "expected_source_ids": [
-      "document:13"
+      "document:5",
+      "incident:2",
+      "incident:6"
     ],
-    "expected_answer_summary": "Debe ligar cada credencial a una persona fisica y revisar la vigencia del proveedor.",
+    "expected_answer_summary": "Debe revisar permiso, zona, horario y eventos de acceso.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -481,18 +490,21 @@
   },
   {
     "id": "eval-025",
-    "question": "Si un proveedor no devuelve la credencial al cerrar el servicio, que procede",
+    "question": "Como se evita duplicar tickets cuando varios equipos reportan el mismo bloqueo",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
-      "document"
+      "document",
+      "incident"
     ],
     "expected_source_ids": [
-      "document:13"
+      "document:6",
+      "incident:59",
+      "incident:63"
     ],
-    "expected_answer_summary": "Debe hacerse bloqueo inmediato y revision del expediente interno.",
+    "expected_answer_summary": "Debe relacionar tickets, cerrar duplicado y centralizar evidencias.",
     "must_include_terms": [
-      "SafeGate"
+      "HelpOps"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -501,18 +513,18 @@
   },
   {
     "id": "eval-026",
-    "question": "Cual es la respuesta inicial ante varias alarmas de acceso denegado en SafeGate",
+    "question": "Que datos minimos debe tener un escalado critico en HelpOps",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:14"
+      "document:6"
     ],
-    "expected_answer_summary": "Debe comprobar vigencia del permiso, zona, horario y factor adicional antes de una excepcion.",
+    "expected_answer_summary": "Debe incluir sistema, centro, turno, referencia, impacto y responsable.",
     "must_include_terms": [
-      "SafeGate"
+      "HelpOps"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -521,18 +533,21 @@
   },
   {
     "id": "eval-027",
-    "question": "Cundo puede darse acceso de contingencia ante una alarma de acceso denegado",
+    "question": "Como se trata una no conformidad en QualiTrace QMS sin dictamen final",
     "category": "seguridad",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
-      "document"
+      "document",
+      "incident"
     ],
     "expected_source_ids": [
-      "document:14"
+      "document:10",
+      "incident:74",
+      "incident:78"
     ],
-    "expected_answer_summary": "Debe validarlo el supervisor y registrarse la incidencia y personas afectadas.",
+    "expected_answer_summary": "Debe mantener cuarentena y solicitar dictamen de Calidad.",
     "must_include_terms": [
-      "SafeGate"
+      "QualiTrace QMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -541,16 +556,16 @@
   },
   {
     "id": "eval-028",
-    "question": "Que debo validar al dar de alta a un conductor nuevo en OnboardHub",
+    "question": "Que pasos debe completar un coordinador nuevo en OnboardHub",
     "category": "onboarding",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:15"
+      "document:7"
     ],
-    "expected_answer_summary": "Debe comprobar licencia, formacion y firma del responsable antes del primer turno.",
+    "expected_answer_summary": "Debe completar ficha, leer procedimientos, asignar mentor y validar permisos.",
     "must_include_terms": [
       "OnboardHub"
     ],
@@ -561,16 +576,19 @@
   },
   {
     "id": "eval-029",
-    "question": "Si falta documentacion critica en el alta de un conductor, puede avanzar el onboarding",
+    "question": "Puede cerrarse onboarding sin mentor asignado",
     "category": "onboarding",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
-      "document"
+      "document",
+      "incident"
     ],
     "expected_source_ids": [
-      "document:15"
+      "document:7",
+      "incident:79",
+      "incident:82"
     ],
-    "expected_answer_summary": "Debe indicar que no debe avanzar a la siguiente fase.",
+    "expected_answer_summary": "Debe indicar que no y que el expediente queda bloqueado.",
     "must_include_terms": [
       "OnboardHub"
     ],
@@ -581,16 +599,16 @@
   },
   {
     "id": "eval-030",
-    "question": "Que incluye el checklist de bienvenida para personal de almacen en OnboardHub",
+    "question": "Que permisos hay que validar para un coordinador antes del primer turno",
     "category": "onboarding",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:16"
+      "document:7"
     ],
-    "expected_answer_summary": "Debe confirmar acceso, supervisor, calendario y equipo asignado.",
+    "expected_answer_summary": "Debe validar LogiCore ERP, AlmaTrack WMS, RutaNexo TMS y SafeGate segun rol.",
     "must_include_terms": [
       "OnboardHub"
     ],
@@ -601,16 +619,97 @@
   },
   {
     "id": "eval-031",
-    "question": "Que pasa con un alta incompleta antes del primer turno productivo",
+    "question": "Como se revisa el checklist de apertura y cierre de turno",
     "category": "onboarding",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:16"
+      "document:18"
     ],
-    "expected_answer_summary": "Debe bloquearse antes de llegar al primer turno productivo.",
+    "expected_answer_summary": "Debe revisar tickets abiertos, pedidos/rutas criticas, accesos y handover.",
+    "must_include_terms": [
+      "HelpOps"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-032",
+    "question": "Que pasa si el relevo no puede asumir un pendiente al cierre de turno",
+    "category": "onboarding",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:18"
+    ],
+    "expected_answer_summary": "Debe abrir o actualizar ticket en HelpOps antes de salir.",
+    "must_include_terms": [
+      "HelpOps"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-033",
+    "question": "Como se gestionan documentos incompletos o ilegibles en un expediente de onboarding",
+    "category": "onboarding",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:19"
+    ],
+    "expected_answer_summary": "Debe identificar campo, revisar imagen, pedir nueva captura y marcar pendiente.",
+    "must_include_terms": [
+      "ScanBridge IDP"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-034",
+    "question": "Si falta firma legible en un documento de onboarding, se puede cerrar el expediente",
+    "category": "onboarding",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:19"
+    ],
+    "expected_answer_summary": "Debe indicar que no se cierra con firma ilegible.",
+    "must_include_terms": [
+      "ScanBridge IDP"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-035",
+    "question": "Soy nuevo en operaciones y necesito saber que leo antes de mi primer turno",
+    "category": "onboarding",
+    "expected_behavior": "answer_with_sources",
+    "expected_source_types": [
+      "document"
+    ],
+    "expected_source_ids": [
+      "document:7",
+      "document:18"
+    ],
+    "expected_answer_summary": "Debe orientar a procedimientos criticos, mentor, permisos y checklist de turno.",
     "must_include_terms": [
       "OnboardHub"
     ],
@@ -620,97 +719,17 @@
     "follow_up_messages": []
   },
   {
-    "id": "eval-032",
-    "question": "Como se entregan manuales operativos a nuevas incorporaciones usando DocuFlow",
-    "category": "onboarding",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:17"
-    ],
-    "expected_answer_summary": "Debe usar la version aprobada y registrar confirmacion de lectura.",
-    "must_include_terms": [
-      "DocuFlow"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-033",
-    "question": "Si una persona nueva no puede acceder a la documentacion de arranque en DocuFlow, a quien se escala",
-    "category": "onboarding",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:17"
-    ],
-    "expected_answer_summary": "Debe escalarse al responsable de onboarding.",
-    "must_include_terms": [
-      "DocuFlow"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-034",
-    "question": "Como se asignan permisos iniciales por rol en SafeGate durante el onboarding",
-    "category": "onboarding",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:18"
-    ],
-    "expected_answer_summary": "Debe verificar rol, supervisor y centro antes de emitir credenciales.",
-    "must_include_terms": [
-      "SafeGate"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-035",
-    "question": "Si el rol es temporal, que detalle debe documentarse al dar permisos iniciales",
-    "category": "onboarding",
-    "expected_behavior": "answer_with_sources",
-    "expected_source_types": [
-      "document"
-    ],
-    "expected_source_ids": [
-      "document:18"
-    ],
-    "expected_answer_summary": "Debe documentarse la expiracion prevista.",
-    "must_include_terms": [
-      "SafeGate"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
     "id": "eval-036",
-    "question": "Como se escalan incidencias criticas con impacto operativo segun la politica interna",
+    "question": "Como debe citar fuentes el asistente interno cuando responde",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:19"
+      "document:20"
     ],
-    "expected_answer_summary": "Debe indicar criterios de criticidad, responsables y trazabilidad del escalado.",
+    "expected_answer_summary": "Debe citar documento o incidencia, distinguir procedimiento de caso similar y pedir aclaracion si falta contexto.",
     "must_include_terms": [
       "DocuFlow"
     ],
@@ -721,16 +740,16 @@
   },
   {
     "id": "eval-037",
-    "question": "Cuando hay que avisar a continuidad operativa en una incidencia critica",
+    "question": "Debe el asistente presentar un caso parecido como solucion definitiva",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:19"
+      "document:20"
     ],
-    "expected_answer_summary": "Debe activarse cuando el impacto operativo supere el umbral definido en la politica.",
+    "expected_answer_summary": "Debe indicar que no debe convertir un caso parecido en solucion definitiva.",
     "must_include_terms": [
       "DocuFlow"
     ],
@@ -741,18 +760,18 @@
   },
   {
     "id": "eval-038",
-    "question": "Que controles exige la politica de cambios maestros y doble validacion en LogiCore ERP",
+    "question": "Como reviso KPIs operativos en OpsLake antes de presentarlos",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:20"
+      "document:15"
     ],
-    "expected_answer_summary": "Debe mencionar doble validacion y evidencia de aprobacion.",
+    "expected_answer_summary": "Debe revisar centro, ventana, fuente, sistema transaccional y desviaciones.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "OpsLake"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -761,18 +780,18 @@
   },
   {
     "id": "eval-039",
-    "question": "Se pueden resolver cambios maestros urgentes con atajos manuales no documentados",
+    "question": "Puedo usar un KPI de OpsLake si falta actualizacion de origen",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:20"
+      "document:15"
     ],
-    "expected_answer_summary": "Debe indicar que no, y que toda excepcion debe quedar documentada y aprobada.",
+    "expected_answer_summary": "Debe indicar que no se usa como dato definitivo si falta actualizacion.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "OpsLake"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -781,16 +800,16 @@
   },
   {
     "id": "eval-040",
-    "question": "Quien debe aprobar una excepcion operativa con impacto critico segun la politica interna",
+    "question": "Que debe hacer el asistente si no encuentra evidencia directa",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:19"
+      "document:20"
     ],
-    "expected_answer_summary": "Debe requerir aprobacion y evidencia de cierre para auditoria interna.",
+    "expected_answer_summary": "Debe explicar limitacion y pedir datos o proponer registrar incidencia.",
     "must_include_terms": [
       "DocuFlow"
     ],
@@ -801,18 +820,18 @@
   },
   {
     "id": "eval-041",
-    "question": "Como se documenta la evidencia de una doble validacion de datos maestros",
+    "question": "Como se documenta una desviacion antes de presentar un KPI operativo",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:20"
+      "document:15"
     ],
-    "expected_answer_summary": "Debe dejarse trazabilidad con aprobador y evidencia de cierre.",
+    "expected_answer_summary": "Debe incluir panel, filtro, fecha, sistema origen y comentario.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "OpsLake"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -821,16 +840,16 @@
   },
   {
     "id": "eval-042",
-    "question": "Si una contingencia critica supera la duracion prevista, que seguimiento exige la politica",
+    "question": "Que diferencia hay entre procedimiento vigente y caso similar para el asistente",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
       "document"
     ],
     "expected_source_ids": [
-      "document:19"
+      "document:20"
     ],
-    "expected_answer_summary": "Debe indicar seguimiento formal y escalado conforme a criticidad.",
+    "expected_answer_summary": "Debe diferenciar documento procedimental de incidencia relacionada.",
     "must_include_terms": [
       "DocuFlow"
     ],
@@ -841,7 +860,7 @@
   },
   {
     "id": "eval-043",
-    "question": "Por que no deben usarse movimientos masivos o cambios maestros con procedimientos no documentados",
+    "question": "Si una respuesta usa fuentes de sistemas distintos, que precaucion debe tomar el asistente",
     "category": "politicas_internas",
     "expected_behavior": "answer_with_sources",
     "expected_source_types": [
@@ -850,9 +869,9 @@
     "expected_source_ids": [
       "document:20"
     ],
-    "expected_answer_summary": "Debe insistir en trazabilidad, aprobacion y auditoria interna.",
+    "expected_answer_summary": "Debe no usar fuentes de sistemas distintos sin advertirlo o pedir aclaracion.",
     "must_include_terms": [
-      "LogiCore ERP"
+      "DocuFlow"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -868,9 +887,10 @@
       "incident"
     ],
     "expected_source_ids": [
-      "incident:1"
+      "incident:1",
+      "incident:5"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar caso resuelto y resumir recalculo de grupo, zona y credencial.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -881,18 +901,20 @@
   },
   {
     "id": "eval-045",
-    "question": "Hubo una ruta que no se recalculaba tras una incidencia vial en RutaNexo. Como quedo resuelta",
+    "question": "Hubo una ruta congelada tras parada prioritaria en RutaNexo TMS. Como quedo resuelta",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:2"
+      "incident:43",
+      "incident:49",
+      "incident:55"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar caso resuelto y restaurar version/revisar restriccion/publicar secuencia.",
     "must_include_terms": [
-      "RutaNexo"
+      "RutaNexo TMS"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -901,16 +923,18 @@
   },
   {
     "id": "eval-046",
-    "question": "Que solucion se aplico cuando quedo bloqueada una ubicacion tras un conteo ciclico en AlmaTrack WMS",
+    "question": "Que solucion se aplico ante diferencia de stock tras conteo ciclico en AlmaTrack WMS",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:3"
+      "incident:10",
+      "incident:18",
+      "incident:26"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar caso resuelto con bloqueo, reconciliacion y segundo conteo.",
     "must_include_terms": [
       "AlmaTrack WMS"
     ],
@@ -921,16 +945,18 @@
   },
   {
     "id": "eval-047",
-    "question": "Como se resolvio un pedido retenido por validacion manual en LogiCore ERP",
+    "question": "Como se resolvio un pedido retenido por regla manual en LogiCore ERP",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:4"
+      "incident:28",
+      "incident:34",
+      "incident:40"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar revision de regla, motivo de liberacion y reenvio a almacen.",
     "must_include_terms": [
       "LogiCore ERP"
     ],
@@ -941,16 +967,17 @@
   },
   {
     "id": "eval-048",
-    "question": "Que correccion se hizo cuando un checklist de onboarding no tenia supervisor asignado en OnboardHub",
+    "question": "Que correccion se hizo cuando OnboardHub tenia un checklist de coordinador sin mentor",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:5"
+      "incident:79",
+      "incident:82"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar mentor, turno de sombra y validacion de permisos.",
     "must_include_terms": [
       "OnboardHub"
     ],
@@ -961,16 +988,17 @@
   },
   {
     "id": "eval-049",
-    "question": "Que se hizo cuando habia un documento operativo obsoleto publicado en DocuFlow",
+    "question": "Que se hizo cuando DocuFlow tenia un procedimiento publicado con version antigua",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:6"
+      "incident:87",
+      "incident:90"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar republicacion de version completa y retirada de copia obsoleta.",
     "must_include_terms": [
       "DocuFlow"
     ],
@@ -981,16 +1009,17 @@
   },
   {
     "id": "eval-050",
-    "question": "Como se corrigio un permiso fisico nocturno que no propagaba bien en SafeGate",
+    "question": "Como se corrigio un permiso nocturno sin propagacion completa en SafeGate",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:7"
+      "incident:2",
+      "incident:6"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar sincronizacion de permisos de lector y ventana horaria.",
     "must_include_terms": [
       "SafeGate"
     ],
@@ -1001,18 +1030,19 @@
   },
   {
     "id": "eval-051",
-    "question": "Que se hizo para corregir una sincronizacion incompleta de ubicacion en AlmaTrack WMS",
+    "question": "Que se hizo con un CMR cuya matricula fue mal extraida en ScanBridge IDP",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:8"
+      "incident:67",
+      "incident:71"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar correccion desde imagen original y vinculo a ruta correcta.",
     "must_include_terms": [
-      "AlmaTrack WMS"
+      "ScanBridge IDP"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -1021,16 +1051,18 @@
   },
   {
     "id": "eval-052",
-    "question": "Como se arreglo una integracion intercentro con estado inconsistente en LogiCore ERP",
+    "question": "Como se arreglo una integracion intercentro con estado contradictorio en LogiCore ERP",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:9"
+      "incident:30",
+      "incident:36",
+      "incident:42"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar republicacion de evento y confirmacion logica.",
     "must_include_terms": [
       "LogiCore ERP"
     ],
@@ -1041,18 +1073,19 @@
   },
   {
     "id": "eval-053",
-    "question": "Que solucion tuvo un manual de bienvenida sin acuse de lectura en DocuFlow",
+    "question": "Que solucion tuvo un KPI de expediciones incompleto en OpsLake",
     "category": "incidencia_resuelta",
     "expected_behavior": "say_incident_resolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:10"
+      "incident:83",
+      "incident:86"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso resuelto y resumir la accion correctiva conocida.",
+    "expected_answer_summary": "Debe indicar dato provisional, recarga de origen y fecha de actualizacion.",
     "must_include_terms": [
-      "DocuFlow"
+      "OpsLake"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -1061,7 +1094,7 @@
   },
   {
     "id": "eval-054",
-    "question": "Hay un supervisor al que SafeGate le rechaza el acceso en cambio de turno. Hay una solucion definitiva ya documentada",
+    "question": "Tengo una ubicacion RF inconsistente despues de reposicion en AlmaTrack WMS. Hay solucion definitiva",
     "category": "incidencia_no_resuelta",
     "expected_behavior": "say_incident_unresolved",
     "expected_source_types": [
@@ -1070,47 +1103,7 @@
     "expected_source_ids": [
       "incident:91"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso abierto o no resuelto relacionado.",
-    "must_include_terms": [
-      "SafeGate"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-055",
-    "question": "En RutaNexo una ruta queda congelada tras cambiar una parada prioritaria. Esta resuelta o sigue abierta",
-    "category": "incidencia_no_resuelta",
-    "expected_behavior": "say_incident_unresolved",
-    "expected_source_types": [
-      "incident"
-    ],
-    "expected_source_ids": [
-      "incident:92"
-    ],
-    "expected_answer_summary": "Debe indicar que existe un caso abierto o no resuelto relacionado.",
-    "must_include_terms": [
-      "RutaNexo"
-    ],
-    "must_not_include_terms": [],
-    "requires_clarification": false,
-    "should_create_incident": false,
-    "follow_up_messages": []
-  },
-  {
-    "id": "eval-056",
-    "question": "Tengo una ubicacion RF inconsistente despues de una reposicion en AlmaTrack WMS. Hay un caso abierto parecido",
-    "category": "incidencia_no_resuelta",
-    "expected_behavior": "say_incident_unresolved",
-    "expected_source_types": [
-      "incident"
-    ],
-    "expected_source_ids": [
-      "incident:93"
-    ],
-    "expected_answer_summary": "Debe indicar que existe un caso abierto o no resuelto relacionado.",
+    "expected_answer_summary": "Debe indicar que el caso esta abierto y falta causa confirmada.",
     "must_include_terms": [
       "AlmaTrack WMS"
     ],
@@ -1120,17 +1113,17 @@
     "follow_up_messages": []
   },
   {
-    "id": "eval-057",
-    "question": "Hay un pedido bloqueado tras doble validacion de datos maestros en LogiCore ERP. Sigue sin solucion",
+    "id": "eval-055",
+    "question": "Hay un pedido bloqueado tras doble validacion en LogiCore ERP. Sigue abierto o resuelto",
     "category": "incidencia_no_resuelta",
     "expected_behavior": "say_incident_unresolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:94"
+      "incident:92"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso abierto o no resuelto relacionado.",
+    "expected_answer_summary": "Debe indicar caso abierto sin correccion validada.",
     "must_include_terms": [
       "LogiCore ERP"
     ],
@@ -1140,19 +1133,59 @@
     "follow_up_messages": []
   },
   {
-    "id": "eval-058",
-    "question": "En OnboardHub tengo un expediente de conductor sin cierre de onboarding. Se conoce como incidencia abierta",
+    "id": "eval-056",
+    "question": "En RutaNexo TMS hay recalculo masivo pendiente por meteorologia. Se conoce solucion",
     "category": "incidencia_no_resuelta",
     "expected_behavior": "say_incident_unresolved",
     "expected_source_types": [
       "incident"
     ],
     "expected_source_ids": [
-      "incident:95"
+      "incident:93"
     ],
-    "expected_answer_summary": "Debe indicar que existe un caso abierto o no resuelto relacionado.",
+    "expected_answer_summary": "Debe indicar que sigue abierto y sin secuencia final.",
     "must_include_terms": [
-      "OnboardHub"
+      "RutaNexo TMS"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-057",
+    "question": "Hay un lote en cuarentena en QualiTrace QMS sin dictamen final. Esta resuelto",
+    "category": "incidencia_no_resuelta",
+    "expected_behavior": "say_incident_unresolved",
+    "expected_source_types": [
+      "incident"
+    ],
+    "expected_source_ids": [
+      "incident:97"
+    ],
+    "expected_answer_summary": "Debe indicar que no hay dictamen final y sigue abierto.",
+    "must_include_terms": [
+      "QualiTrace QMS"
+    ],
+    "must_not_include_terms": [],
+    "requires_clarification": false,
+    "should_create_incident": false,
+    "follow_up_messages": []
+  },
+  {
+    "id": "eval-058",
+    "question": "En DocuFlow hay una guia con anexo obligatorio no disponible. Hay cierre definitivo",
+    "category": "incidencia_no_resuelta",
+    "expected_behavior": "say_incident_unresolved",
+    "expected_source_types": [
+      "incident"
+    ],
+    "expected_source_ids": [
+      "incident:100"
+    ],
+    "expected_answer_summary": "Debe indicar caso abierto relacionado con anexo no disponible.",
+    "must_include_terms": [
+      "DocuFlow"
     ],
     "must_not_include_terms": [],
     "requires_clarification": false,
@@ -1173,17 +1206,17 @@
     "should_create_incident": false,
     "follow_up_messages": [
       {
-        "message": "Es el cierre de una expedicion con incidencias de ultima milla en RutaNexo.",
+        "message": "Es el cierre de una expedicion en AlmaTrack WMS con bultos retenidos.",
         "expected_behavior": "answer_with_sources",
         "expected_source_types": [
           "document"
         ],
         "expected_source_ids": [
-          "document:7"
+          "document:1"
         ],
-        "expected_answer_summary": "Debe citar el procedimiento de cierre de expedicion con incidencias de ultima milla.",
+        "expected_answer_summary": "Debe usar el procedimiento de cierre de expediciones en AlmaTrack WMS.",
         "must_include_terms": [
-          "RutaNexo"
+          "AlmaTrack WMS"
         ],
         "must_not_include_terms": [],
         "requires_clarification": false,

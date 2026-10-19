@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from evaluation.judges import HeuristicJudge, MockJudge
+from evaluation.judges import HeuristicJudge, LLMJudge, MockJudge
 from evaluation.metrics import (
     compute_abstention_metrics,
     compute_citation_metrics,
@@ -16,6 +16,7 @@ from evaluation.runners import run_ablation_eval, run_answer_eval, run_full_eval
 from evaluation.types import EvaluationQuestion
 from evaluation.utils import load_questions
 from internal_assistant.models import Document, Incident
+from internal_assistant.observability.usage import record_usage
 from internal_assistant.rag import RetrievedChunk
 from internal_assistant.schemas import ChatResponse, SourceSnippet
 
@@ -322,6 +323,8 @@ def test_run_ablation_eval_returns_all_configs(tmp_path):
         "hybrid_vector_heavier",
         "hybrid_top_8",
     }
+    assert all(row["cost_usd"] == 0.0 for row in report["aggregate_metrics"]["comparison"])
+    assert report["cost"]["total_usd"] == 0.0
 
 
 def test_run_answer_eval_handles_multiturn_sequence(tmp_path):
@@ -382,6 +385,113 @@ def test_run_answer_eval_handles_multiturn_sequence(tmp_path):
         "ask_clarification",
         "abstain_and_offer_incident_registration",
     ]
+    assert "cost_estimate" not in report
+    assert report["cost"]["total_usd"] == 0.0
+    assert report["cost"]["turns"] == 3
+    assert all(row["cost_usd"] == 0.0 for row in report["per_question_results"])
+
+
+class FakeMeteredEvalService(FakeEvalService):
+    """Simula las llamadas reales que registra el provider durante un turno."""
+
+    def simulate_chat(self, request, *, state=None, retrieval_config=None):
+        record_usage(component="embeddings", purpose="embedding", provider="openai", model="text-embedding-3-small", input_tokens=10)
+        record_usage(component="reranker", purpose="rerank", provider="cohere_azure", model="rerank-v3.5", search_units=1)
+        record_usage(component="chat", purpose="planner", provider="openai", model="gpt-4o-mini", input_tokens=400, output_tokens=30)
+        record_usage(
+            component="chat",
+            purpose="answer",
+            provider="openai",
+            model="gpt-4o-mini",
+            input_tokens=2000,
+            cached_input_tokens=1024,
+            output_tokens=150,
+        )
+        return super().simulate_chat(request, state=state, retrieval_config=retrieval_config)
+
+
+def test_run_answer_eval_reports_real_metered_cost(tmp_path):
+    dataset = [
+        {
+            "id": f"eval-{index}",
+            "question": "Como se controla un pedido intercentro en LogiCore ERP",
+            "category": "operaciones",
+            "expected_behavior": "answer_with_sources",
+            "expected_source_types": ["document"],
+            "expected_source_ids": ["document:1"],
+            "expected_answer_summary": "",
+            "must_include_terms": ["LogiCore ERP"],
+            "must_not_include_terms": [],
+            "requires_clarification": False,
+            "should_create_incident": False,
+            "follow_up_messages": [],
+        }
+        for index in range(2)
+    ]
+    dataset_path = tmp_path / "eval.json"
+    _write_dataset(dataset_path, dataset)
+
+    report = run_answer_eval(
+        dataset_path=dataset_path,
+        output_dir=tmp_path,
+        provider_name="openai",
+        session=FakeSession(documents={1}),
+        service_class=FakeMeteredEvalService,
+    )
+
+    turn_usd = (
+        (400 * 0.15 + 30 * 0.60 + 976 * 0.15 + 1024 * 0.075 + 150 * 0.60) / 1e6
+        + 10 * 0.02 / 1e6
+        + 2.0 / 1000
+    )
+    cost = report["cost"]
+    assert cost["complete"] is True
+    assert cost["total_usd"] == pytest.approx(2 * turn_usd)
+    assert cost["avg_usd_per_turn"] == pytest.approx(turn_usd)
+    assert cost["by_component_usd"]["reranker"] == pytest.approx(0.004)
+    purposes = {(row["component"], row["purpose"]) for row in cost["breakdown"]}
+    assert purposes == {("chat", "planner"), ("chat", "answer"), ("embeddings", "embedding"), ("reranker", "rerank")}
+
+    row = report["per_question_results"][0]
+    assert row["cost_usd"] == pytest.approx(turn_usd)
+    assert row["chat_input_tokens"] == 2400
+    assert row["chat_cached_input_tokens"] == 1024
+    assert row["chat_output_tokens"] == 180
+    assert row["embedding_tokens"] == 10
+    assert row["rerank_search_units"] == 1
+
+    markdown = Path(report["report_paths"]["markdown"]).read_text(encoding="utf-8")
+    assert "## Cost" in markdown
+    assert "| chat | planner | openai | gpt-4o-mini |" in markdown
+
+
+def test_llm_judge_records_usage_with_judge_purpose():
+    from internal_assistant.observability.usage import metering
+
+    class FakeCompletions:
+        def create(self, **kwargs):
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content='{"llm_score": 1, "llm_verdict": "pass"}'))],
+                usage=SimpleNamespace(prompt_tokens=321, completion_tokens=12, prompt_tokens_details=None),
+            )
+
+    provider = SimpleNamespace(
+        provider_name="openai",
+        client=SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions())),
+        settings=SimpleNamespace(chat_model="gpt-4o-mini"),
+    )
+    judge = LLMJudge(FakeSession(documents={1}), llm_provider=provider)
+    turn = load_questions(ROOT / "evaluation" / "datasets" / "rag_eval_questions.json")[0]
+    from evaluation.utils import expand_question
+
+    expanded = expand_question(turn)[0]
+    service = FakeEvalService(FakeSession(documents={1}))
+    response, _, meta = service.simulate_chat(SimpleNamespace(conversation_id=1, message=expanded.message))
+    with metering() as meter:
+        verdict = judge.judge(expanded, response, meta)
+    assert verdict["llm_verdict"] == "pass"
+    [row] = meter.aggregate()
+    assert (row["component"], row["purpose"], row["input_tokens"], row["output_tokens"]) == ("chat", "judge", 321, 12)
 
 
 def test_run_full_eval_with_mock_provider_does_not_use_openai(tmp_path, monkeypatch):
@@ -423,3 +533,5 @@ def test_run_full_eval_with_mock_provider_does_not_use_openai(tmp_path, monkeypa
 
     assert report["summary"]["Questions evaluated"] == 1
     assert report["aggregate_metrics"]["retrieval"]["hit_at_5"] == 1.0
+    assert report["cost"]["total_usd"] == 0.0
+    assert set(report["cost"]["phases_usd"]) == {"retrieval", "answer"}

@@ -23,6 +23,14 @@ if [[ "${provider}" == "openai_compatible" ]]; then
   fi
 fi
 
+if [[ "${RERANKER_ENABLED:-false}" == "true" ]]; then
+  reranker_health_url="${RERANKER_BASE_URL:-http://127.0.0.1:8091}/health"
+  print_info "Comprobando reranker local: ${reranker_health_url}"
+  if ! run_curl -fsS --max-time 15 "${reranker_health_url}" >/dev/null; then
+    fail "RERANKER_ENABLED=true pero el reranker no responde: ${reranker_health_url}"
+  fi
+fi
+
 env_pairs=(
   "DATABASE_URL=${DATABASE_URL}"
   "APP_ENV=${APP_ENV:-}"
@@ -34,6 +42,8 @@ env_pairs=(
   "EMBEDDING_DIMENSIONS=${EMBEDDING_DIMENSIONS:-}"
   "LLM_BASE_URL=${LLM_BASE_URL:-}"
   "LLM_API_KEY=${LLM_API_KEY:-}"
+  "RERANKER_ENABLED=${RERANKER_ENABLED:-false}"
+  "RERANKER_BASE_URL=${RERANKER_BASE_URL:-http://127.0.0.1:8091}"
 )
 
 run_uv_python_inline_env '

@@ -14,13 +14,16 @@ var normalizedAppSettings = [for setting in appSettings: {
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: planName
   location: location
-  kind: 'linux'
+  kind: 'functionapp'
   sku: {
-    name: 'B1'
-    tier: 'Basic'
-    capacity: 1
+    name: 'Y1'
+    tier: 'Dynamic'
+    size: 'Y1'
+    family: 'Y'
+    capacity: 0
   }
   properties: {
+    computeMode: 'Dynamic'
     reserved: true
   }
 }
@@ -44,11 +47,14 @@ resource indexerFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: indexerFunctionName
   location: location
   kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
     siteConfig: {
-      alwaysOn: true
+      alwaysOn: false
       linuxFxVersion: 'PYTHON|3.12'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -61,11 +67,14 @@ resource incidentsFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: incidentsFunctionName
   location: location
   kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
     siteConfig: {
-      alwaysOn: true
+      alwaysOn: false
       linuxFxVersion: 'PYTHON|3.12'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -78,3 +87,5 @@ output indexerFunctionName string = indexerFunction.name
 output indexerDefaultHostName string = indexerFunction.properties.defaultHostName
 output incidentsFunctionName string = incidentsFunction.name
 output incidentsDefaultHostName string = incidentsFunction.properties.defaultHostName
+output indexerPrincipalId string = indexerFunction.identity.principalId
+output incidentsPrincipalId string = incidentsFunction.identity.principalId

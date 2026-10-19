@@ -94,6 +94,35 @@ class FakeRetrievalLogsRepository:
         return kwargs
 
 
+class FakeConversationMemoryRepository:
+    def __init__(self, results=None):
+        self.results = results or []
+        self.items = []
+        self.search_calls = []
+
+    def upsert_for_message(self, **kwargs):
+        existing = next((item for item in self.items if item["message_id"] == kwargs["message_id"]), None)
+        if existing:
+            existing.update(kwargs)
+            return existing
+        self.items.append(kwargs)
+        return kwargs
+
+    def search(self, *, conversation_id, query_embedding, limit=5, exclude_message_id=None):
+        self.search_calls.append(
+            {
+                "conversation_id": conversation_id,
+                "query_embedding": query_embedding,
+                "limit": limit,
+                "exclude_message_id": exclude_message_id,
+            }
+        )
+        return self.results[:limit]
+
+    def list_recent(self, conversation_id, limit=6):
+        return self.items[-limit:]
+
+
 class FakeIncidentRepository:
     def __init__(self):
         self.items = []
@@ -106,7 +135,7 @@ class FakeRetriever:
     def __init__(self, results=None):
         self.results = results or []
 
-    def search(self, query, query_embedding, limit=5, config=None):
+    def search(self, query, query_embedding, limit=5, config=None, filters=None):
         return self.results[:limit]
 
 

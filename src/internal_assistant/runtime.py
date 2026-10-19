@@ -47,12 +47,19 @@ def validate_runtime_settings(settings: Settings, *, require_bot: bool | None = 
     elif provider == "openai_compatible" and not settings.llm_base_url.strip():
         errors.append("LLM_BASE_URL es obligatorio cuando LLM_PROVIDER=openai_compatible")
 
+    if embeddings_provider == "openai" and _is_placeholder(settings.openai_api_key):
+        errors.append("OPENAI_API_KEY es obligatorio cuando EMBEDDINGS_PROVIDER=openai")
+
     if environment in {"dev", "demo"} and provider == "mock":
         errors.append("LLM_PROVIDER=mock no es valido en APP_ENV=dev|demo")
 
+    supported_split_provider = provider == "openai_compatible" and embeddings_provider == "openai"
     if embeddings_provider not in {"", "auto", provider}:
-        if not (embeddings_provider == "mock" and provider == "mock"):
-            errors.append("EMBEDDINGS_PROVIDER debe coincidir con el proveedor de chat o usar mock completo")
+        if not (embeddings_provider == "mock" and provider == "mock") and not supported_split_provider:
+            errors.append(
+                "EMBEDDINGS_PROVIDER debe coincidir con el proveedor de chat, usar mock completo, "
+                "o usar LLM_PROVIDER=openai_compatible con EMBEDDINGS_PROVIDER=openai"
+            )
 
     if environment in {"dev", "demo"}:
         if _is_placeholder(settings.admin_api_key):

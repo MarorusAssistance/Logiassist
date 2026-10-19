@@ -19,7 +19,8 @@ class ConversationRepository:
     ) -> Conversation:
         if conversation_id:
             conversation = self.session.get(Conversation, conversation_id)
-            if conversation:
+            # Un conversation_id ajeno no da acceso al historial ni a la memoria de otro usuario.
+            if conversation and conversation.user_id == user_id:
                 return conversation
 
         conversation = Conversation(

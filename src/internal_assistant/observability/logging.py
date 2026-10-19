@@ -18,6 +18,7 @@ def configure_logging() -> None:
     formatter = JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s")
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
+    _configure_langsmith(settings)
     _configure_azure_monitor(settings.applicationinsights_connection_string)
 
 
@@ -45,3 +46,11 @@ def _configure_azure_monitor(connection_string: str) -> None:
         configure_azure_monitor(connection_string=connection_string, logger_name="")
     except Exception as exc:
         logging.getLogger(__name__).warning("No se pudo inicializar Azure Monitor: %s", exc)
+
+
+def _configure_langsmith(settings) -> None:
+    try:
+        from internal_assistant.observability.tracing import configure_langsmith_environment
+    except ImportError:
+        return
+    configure_langsmith_environment(settings)

@@ -134,7 +134,7 @@ class FakeChunkRepository:
         self.session.chunks[key] = chunk
         return chunk
 
-    def vector_search(self, embedding, limit=15):
+    def vector_search(self, embedding, limit=15, filters=None):
         rows = []
         for chunk in self.session.chunks.values():
             rows.append(
@@ -149,7 +149,7 @@ class FakeChunkRepository:
             )
         return rows[:limit]
 
-    def text_search(self, query, limit=15):
+    def text_search(self, query, limit=15, filters=None):
         terms = [term.lower() for term in query.split()]
         rows = []
         for chunk in self.session.chunks.values():

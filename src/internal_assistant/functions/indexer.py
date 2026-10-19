@@ -30,12 +30,15 @@ def _resolve_indexing_provider(llm_provider: LLMProvider | None = None) -> LLMPr
     if embeddings_provider in {"", "auto", chat_provider}:
         return build_default_provider()
 
+    if chat_provider == "openai_compatible" and embeddings_provider == "openai":
+        return build_default_provider()
+
     if embeddings_provider == "mock" and chat_provider == "mock":
         return MockLLMProvider()
 
     raise ValueError(
         "EMBEDDINGS_PROVIDER no es compatible con el proveedor de chat configurado. "
-        "Usa el mismo proveedor o el modo mock completo."
+        "Usa el mismo proveedor, el modo mock completo, o LLM_PROVIDER=openai_compatible con EMBEDDINGS_PROVIDER=openai."
     )
 
 
@@ -62,6 +65,7 @@ def _index_source_chunks(session: Session, source_type: str, source_id: int, pay
         raise ValueError("El proveedor devolvio un numero de embeddings distinto al numero de chunks")
 
     for payload, embedding in zip(payload_list, embeddings, strict=True):
+        metadata = payload.metadata or {}
         chunk = Chunk(
             source_type=source_type,
             source_id=source_id,
@@ -69,7 +73,14 @@ def _index_source_chunks(session: Session, source_type: str, source_id: int, pay
             content=payload.content,
             content_hash=payload.content_hash,
             embedding=embedding,
-            metadata_=payload.metadata,
+            metadata_=metadata,
+            source_title=metadata.get("title"),
+            affected_system=metadata.get("affected_system"),
+            department=metadata.get("department"),
+            document_type=metadata.get("document_type") if source_type == "document" else None,
+            incident_status=metadata.get("status") if source_type == "incident" else None,
+            is_resolved=metadata.get("is_resolved") if source_type == "incident" else None,
+            tags=metadata.get("tags") or [],
             full_text_tsvector=None,
         )
         persisted = repository.upsert(chunk)

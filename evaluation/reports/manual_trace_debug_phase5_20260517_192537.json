@@ -1,0 +1,322 @@
+{
+  "phase": "phase5_metadata_filtering_bge_reranker",
+  "created_at": "2026-05-17T17:26:01Z",
+  "config": {
+    "llm_provider": "openai_compatible",
+    "embeddings_provider": "openai",
+    "chat_model": "qwen/qwen3-30b-a3b-2507",
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dimensions": 1024,
+    "reranker_enabled": true,
+    "reranker_base_url": "http://127.0.0.1:8091",
+    "reranker_model": "BAAI/bge-reranker-v2-m3"
+  },
+  "elapsed_ms": 23103,
+  "results": [
+    {
+      "question": "Como se registra una entrega parcial en ventana critica en LogiCore ERP?",
+      "elapsed_ms": 10387,
+      "needs_clarification": false,
+      "should_offer_incident": false,
+      "source_count": 5,
+      "answer_head": "Resumen\nPara registrar una entrega parcial en ventana crítica en LogiCore ERP, debe seguirse el procedimiento descrito en el documento interno de Operaciones. Este proceso permite gestionar expediciones parciales sin perder la promesa de servicio ni la trazabilidad del pedido cuando un camión sale c",
+      "planner_output": {
+        "intent": "procedimiento de registro de entrega parcial en ventana crítica en LogiCore ERP",
+        "needs_conversation_memory": false,
+        "needs_knowledge_index": true,
+        "can_answer_from_conversation_only": false,
+        "should_ask_clarification_first": false,
+        "conversation_memory_query": "",
+        "knowledge_index_query": "registro de entrega parcial en ventana crítica en LogiCore ERP",
+        "user_context_summary": "Usuario pregunta sobre el procedimiento para registrar una entrega parcial en ventana crítica dentro del sistema LogiCore ERP.",
+        "expected_source_preference": [
+          "document"
+        ],
+        "mentioned_systems": [
+          "LogiCore ERP"
+        ],
+        "retrieval_filters": {
+          "source_types": [],
+          "affected_systems": [
+            "LogiCore ERP"
+          ],
+          "departments": [],
+          "document_types": [
+            "procedimiento"
+          ],
+          "incident_statuses": [],
+          "is_resolved": null,
+          "tags_any": []
+        },
+        "filter_reason": "El usuario pregunta específicamente sobre un procedimiento en LogiCore ERP relacionado con entregas parciales en ventana crítica.",
+        "reason": "Se requiere un documento de procedimiento específico en LogiCore ERP para responder con precisión al proceso de registro de una entrega parcial en ventana crítica. No hay contexto previo que permita responder sin consulta al índice de conocimiento."
+      },
+      "evidence_assessment": {
+        "should_block_answer": false,
+        "requires_direct_evidence": true,
+        "reason_code": "sufficient_evidence",
+        "clarification_question": "",
+        "document_count": 1,
+        "incident_count": 4,
+        "source_types": [
+          "document",
+          "incident"
+        ],
+        "source_systems": [
+          "LogiCore ERP"
+        ],
+        "related_only": false,
+        "system_mismatch": false,
+        "has_matching_document": true,
+        "has_matching_source": true,
+        "direct_chunk_ids": [
+          801
+        ],
+        "semantic_confidence": 1.0,
+        "evidence_mode": "direct_document",
+        "allowed_behavior": "answer_with_sources",
+        "resolved_incident_count": 4,
+        "unresolved_incident_count": 0,
+        "direct_resolved_incident_ids": [
+          4,
+          4,
+          9,
+          4
+        ],
+        "direct_unresolved_incident_ids": [],
+        "direct_document_ids": [
+          1
+        ],
+        "blocking_reason": ""
+      },
+      "retrieved": [
+        {
+          "chunk_id": 801,
+          "source_type": "document",
+          "source_id": 1,
+          "title": "Registro de entregas parciales en ventana crítica",
+          "affected_system": "LogiCore ERP",
+          "hybrid_score": 1.0,
+          "rerank_score": 0.9998564720153809,
+          "final_score": 1.0
+        },
+        {
+          "chunk_id": 871,
+          "source_type": "incident",
+          "source_id": 4,
+          "title": "Pedido retenido por validación manual #084",
+          "affected_system": "LogiCore ERP",
+          "hybrid_score": 0.0053841587100964,
+          "rerank_score": 0.29935041069984436,
+          "final_score": 0.24059153736487948
+        },
+        {
+          "chunk_id": 872,
+          "source_type": "incident",
+          "source_id": 4,
+          "title": "Pedido retenido por validación manual #084",
+          "affected_system": "LogiCore ERP",
+          "hybrid_score": 0.030358858959823456,
+          "rerank_score": 0.1364845484495163,
+          "final_score": 0.11527508428293329
+        },
+        {
+          "chunk_id": 887,
+          "source_type": "incident",
+          "source_id": 9,
+          "title": "Integración de pedido intercentro con estado inconsistente #089",
+          "affected_system": "LogiCore ERP",
+          "hybrid_score": 0.018899510296523016,
+          "rerank_score": 0.08710719645023346,
+          "final_score": 0.07347566251152558
+        },
+        {
+          "chunk_id": 870,
+          "source_type": "incident",
+          "source_id": 4,
+          "title": "Pedido retenido por validación manual #004",
+          "affected_system": "LogiCore ERP",
+          "hybrid_score": 0.0011456312731024589,
+          "rerank_score": 0.03961962088942528,
+          "final_score": 0.03192937283866486
+        }
+      ]
+    },
+    {
+      "question": "Como se resolvio la visita tecnica con acceso temporal rechazado en SafeGate?",
+      "elapsed_ms": 9807,
+      "needs_clarification": false,
+      "should_offer_incident": false,
+      "source_count": 5,
+      "answer_head": "Resumen\nLa incidencia de acceso temporal rechazado durante una visita técnica en SafeGate fue resuelta en todos los casos registrados. El problema fue identificado como un flujo ficticio del entorno de demo, diseñado para simular casuísticas internas de logística, seguridad y onboarding. No se debió",
+      "planner_output": {
+        "intent": "consulta sobre resolución de incidente específico",
+        "needs_conversation_memory": false,
+        "needs_knowledge_index": true,
+        "can_answer_from_conversation_only": false,
+        "should_ask_clarification_first": false,
+        "conversation_memory_query": "",
+        "knowledge_index_query": "resolución de visita técnica con acceso temporal rechazado en SafeGate",
+        "user_context_summary": "Usuario pregunta por la resolución de un incidente específico relacionado con acceso temporal rechazado durante una visita técnica en el sistema SafeGate.",
+        "expected_source_preference": [
+          "incident"
+        ],
+        "mentioned_systems": [
+          "SafeGate"
+        ],
+        "retrieval_filters": {
+          "source_types": [
+            "incident"
+          ],
+          "affected_systems": [
+            "SafeGate"
+          ],
+          "departments": [],
+          "document_types": [],
+          "incident_statuses": [
+            "resolved"
+          ],
+          "is_resolved": null,
+          "tags_any": []
+        },
+        "filter_reason": "El usuario pregunta específicamente por cómo se resolvió un caso, lo que indica que busca un incidente ya cerrado relacionado con SafeGate.",
+        "reason": "La consulta se enfoca en la resolución de un incidente específico (acceso temporal rechazado en SafeGate), por lo que se requiere buscar en el índice de incidentes resueltos relacionados con ese sistema."
+      },
+      "evidence_assessment": {
+        "should_block_answer": false,
+        "requires_direct_evidence": true,
+        "reason_code": "sufficient_evidence",
+        "clarification_question": "",
+        "document_count": 0,
+        "incident_count": 5,
+        "source_types": [
+          "incident"
+        ],
+        "source_systems": [
+          "SafeGate"
+        ],
+        "related_only": true,
+        "system_mismatch": false,
+        "has_matching_document": false,
+        "has_matching_source": true,
+        "direct_chunk_ids": [
+          911,
+          931,
+          941,
+          921,
+          961
+        ],
+        "semantic_confidence": 1.0,
+        "evidence_mode": "direct_resolved_incident",
+        "allowed_behavior": "say_incident_resolved",
+        "resolved_incident_count": 5,
+        "unresolved_incident_count": 0,
+        "direct_resolved_incident_ids": [
+          31,
+          51,
+          61,
+          41,
+          81
+        ],
+        "direct_unresolved_incident_ids": [],
+        "direct_document_ids": [],
+        "blocking_reason": ""
+      },
+      "retrieved": [
+        {
+          "chunk_id": 911,
+          "source_type": "incident",
+          "source_id": 31,
+          "title": "Acceso temporal rechazado para visita técnica #031",
+          "affected_system": "SafeGate",
+          "hybrid_score": 0.7,
+          "rerank_score": 0.9975665807723999,
+          "final_score": 1.0
+        },
+        {
+          "chunk_id": 931,
+          "source_type": "incident",
+          "source_id": 51,
+          "title": "Acceso temporal rechazado para visita técnica #051",
+          "affected_system": "SafeGate",
+          "hybrid_score": 0.6878921623546612,
+          "rerank_score": 0.9975388050079346,
+          "final_score": 0.9965183430000808
+        },
+        {
+          "chunk_id": 941,
+          "source_type": "incident",
+          "source_id": 61,
+          "title": "Acceso temporal rechazado para visita técnica #061",
+          "affected_system": "SafeGate",
+          "hybrid_score": 0.6854637132112456,
+          "rerank_score": 0.9975458979606628,
+          "final_score": 0.9958301885916439
+        },
+        {
+          "chunk_id": 921,
+          "source_type": "incident",
+          "source_id": 41,
+          "title": "Acceso temporal rechazado para visita técnica #041",
+          "affected_system": "SafeGate",
+          "hybrid_score": 0.684944570782196,
+          "rerank_score": 0.9975512623786926,
+          "final_score": 0.9956861641863447
+        },
+        {
+          "chunk_id": 961,
+          "source_type": "incident",
+          "source_id": 81,
+          "title": "Acceso temporal rechazado para visita técnica #081",
+          "affected_system": "SafeGate",
+          "hybrid_score": 0.6725238339293705,
+          "rerank_score": 0.9975321292877197,
+          "final_score": 0.9921220384176922
+        }
+      ]
+    },
+    {
+      "question": "No encuentro solucion para un error nuevo en AlmaTrack WMS.",
+      "elapsed_ms": 2382,
+      "needs_clarification": true,
+      "should_offer_incident": false,
+      "source_count": 0,
+      "answer_head": "Resumen\nNecesito aclarar la consulta antes de buscar informacion.\n\nDetalle\nPara buscar bien en AlmaTrack WMS, necesito el error exacto, pantalla o paso donde ocurre, proceso afectado y una referencia operativa si aplica.\n\nSiguiente paso\nIndica sistema, proceso o contexto operativo. Intento de aclara",
+      "planner_output": {
+        "intent": "buscar solucion para error en sistema",
+        "needs_conversation_memory": false,
+        "needs_knowledge_index": true,
+        "can_answer_from_conversation_only": false,
+        "should_ask_clarification_first": true,
+        "conversation_memory_query": "",
+        "knowledge_index_query": "error en AlmaTrack WMS",
+        "user_context_summary": "Usuario reporta un error nuevo en AlmaTrack WMS sin detalles adicionales.",
+        "expected_source_preference": [
+          "document"
+        ],
+        "mentioned_systems": [
+          "AlmaTrack WMS"
+        ],
+        "retrieval_filters": {
+          "source_types": [
+            "document"
+          ],
+          "affected_systems": [
+            "AlmaTrack WMS"
+          ],
+          "departments": [],
+          "document_types": [
+            "procedimiento"
+          ],
+          "incident_statuses": [],
+          "is_resolved": null,
+          "tags_any": []
+        },
+        "filter_reason": "El usuario menciona un error específico en AlmaTrack WMS, por lo que se prioriza buscar procedimientos relacionados con ese sistema.",
+        "reason": "No se proporcionan detalles del error, por lo que es necesario pedir aclaración antes de buscar en el índice. Sin embargo, se anticipa que se requiere documentación técnica o procedimientos para resolver errores en AlmaTrack WMS."
+      },
+      "evidence_assessment": null,
+      "retrieved": []
+    }
+  ]
+}

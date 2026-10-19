@@ -1,0 +1,30 @@
+{
+  "_meta": {
+    "version": 1,
+    "currency": "USD",
+    "units": "chat/embeddings: USD por 1M tokens; reranker: USD por 1K search units",
+    "sources": [
+      "https://openai.com/api/pricing/",
+      "https://cohere.com/pricing (rerank-v3.5; mismo precio en Azure AI Foundry serverless como Cohere-rerank-v3.5)"
+    ],
+    "updated_at": "2026-10-19",
+    "notes": "Precios de lista sin descuentos (Batch API, compromisos). Revisa los precios contra las fuentes y actualiza updated_at cuando cambien. Se puede sobrescribir con EVAL_PRICING_PATH."
+  },
+  "free_providers": ["mock", "openai_compatible", "http"],
+  "chat": {
+    "gpt-4o-mini": {"input_per_1m": 0.15, "cached_input_per_1m": 0.075, "output_per_1m": 0.60},
+    "gpt-4o": {"input_per_1m": 2.50, "cached_input_per_1m": 1.25, "output_per_1m": 10.00},
+    "gpt-4.1-mini": {"input_per_1m": 0.40, "cached_input_per_1m": 0.10, "output_per_1m": 1.60}
+  },
+  "embeddings": {
+    "text-embedding-3-small": {"input_per_1m": 0.02},
+    "text-embedding-3-large": {"input_per_1m": 0.13}
+  },
+  "reranker": {
+    "rerank-v3.5": {"per_1k_search_units": 2.00},
+    "cohere-rerank-v3.5": {"per_1k_search_units": 2.00}
+  },
+  "provider_default_models": {
+    "reranker": {"cohere_azure": "rerank-v3.5"}
+  }
+}

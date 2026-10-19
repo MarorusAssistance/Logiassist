@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from internal_assistant.config import get_settings
-from internal_assistant.llm import MockLLMProvider, OpenAICompatibleProvider, OpenAIProvider
+from internal_assistant.llm import MockLLMProvider, OpenAIProvider, build_default_provider
 from internal_assistant.models import Document, Incident
 from internal_assistant.schemas import ChatRequest, ChatResponse
 
@@ -206,7 +206,9 @@ def select_provider(provider_name: str):
     if normalized == "openai":
         return OpenAIProvider()
     if normalized == "openai_compatible":
-        return OpenAICompatibleProvider()
+        # Use the same provider composition as runtime so split setups such as
+        # local chat + OpenAI embeddings evaluate against the indexed vector space.
+        return build_default_provider()
     raise ValueError(f"Proveedor de evaluación no soportado: {provider_name}")
 
 
@@ -290,51 +292,3 @@ def write_report_bundle(
     write_json_report(payload, json_path)
     md_path.write_text(markdown, encoding="utf-8")
     return json_path, md_path
-
-
-def estimate_cost(
-    *,
-    provider_name: str,
-    chat_model: str,
-    embedding_model: str,
-    input_tokens: int,
-    output_tokens: int,
-    embedding_tokens: int,
-) -> dict[str, Any]:
-    if provider_name == "mock":
-        return {"provider": provider_name, "estimated_usd": 0.0, "note": "MockProvider no consume APIs externas"}
-    if provider_name in {"openai_compatible", "openai-compatible", "local"}:
-        return {
-            "provider": provider_name,
-            "estimated_usd": 0.0,
-            "input_tokens_estimated": input_tokens,
-            "output_tokens_estimated": output_tokens,
-            "embedding_tokens_estimated": embedding_tokens,
-            "note": "Proveedor local compatible con OpenAI; no se estima coste externo de API",
-        }
-
-    pricing = {
-        "gpt-4o-mini": {"input_per_million": 0.15, "output_per_million": 0.60},
-        "text-embedding-3-small": {"input_per_million": 0.02},
-    }
-    total_cost = 0.0
-    notes: list[str] = []
-    chat_pricing = pricing.get(chat_model)
-    embedding_pricing = pricing.get(embedding_model)
-    if chat_pricing:
-        total_cost += (input_tokens / 1_000_000) * chat_pricing["input_per_million"]
-        total_cost += (output_tokens / 1_000_000) * chat_pricing["output_per_million"]
-    else:
-        notes.append(f"Sin tabla de coste para chat model {chat_model}")
-    if embedding_pricing:
-        total_cost += (embedding_tokens / 1_000_000) * embedding_pricing["input_per_million"]
-    else:
-        notes.append(f"Sin tabla de coste para embedding model {embedding_model}")
-    return {
-        "provider": provider_name,
-        "estimated_usd": round(total_cost, 6),
-        "input_tokens_estimated": input_tokens,
-        "output_tokens_estimated": output_tokens,
-        "embedding_tokens_estimated": embedding_tokens,
-        "note": "; ".join(notes) if notes else "Estimacion aproximada basada en tokens",
-    }

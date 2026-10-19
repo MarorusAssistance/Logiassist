@@ -6,7 +6,7 @@ import sys
 from sqlalchemy import delete
 
 from internal_assistant.db import session_scope
-from internal_assistant.models import Chunk, Conversation, Document, Feedback, Incident, Message, RetrievalLog
+from internal_assistant.models import Chunk, Conversation, ConversationMemory, Document, Feedback, Incident, Message, RetrievalLog
 
 
 def _confirm_reset() -> bool:
@@ -25,6 +25,7 @@ def main() -> int:
 
     with session_scope() as session:
         session.execute(delete(Chunk))
+        session.execute(delete(ConversationMemory))
         session.execute(delete(Feedback))
         session.execute(delete(RetrievalLog))
         session.execute(delete(Message))

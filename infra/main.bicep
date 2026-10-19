@@ -1,24 +1,41 @@
 param projectName string
 param environmentName string
 param location string
+param functionsResourceGroupName string = resourceGroup().name
 param postgresAdminUser string
 @secure()
 param postgresAdminPassword string
 param postgresDatabaseName string
 @secure()
-param openAiApiKey string
+@description('Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto openai-api-key.')
+param openAiApiKey string = ''
 param chatModel string
 param embeddingModel string
 param embeddingDimensions int
 @secure()
-param adminApiKey string
+@description('Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto admin-api-key.')
+param adminApiKey string = ''
 @secure()
-param appSharedSecret string
+@description('Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto app-shared-secret.')
+param appSharedSecret string = ''
 param microsoftAppId string
 @secure()
-param microsoftAppPassword string
+@description('Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto microsoft-app-password.')
+param microsoftAppPassword string = ''
 param allowedOrigins array = []
 param enableApplicationInsights bool = true
+@description('true: crea Key Vault (RBAC), identidades administradas y App Settings como referencias @Microsoft.KeyVault(...).')
+param useKeyVault bool = true
+@description('Nombre opcional del Key Vault. Vacio = kv-<hash> determinista por RG/proyecto/entorno.')
+param keyVaultName string = ''
+@description('Object ID de quien sincroniza secretos (az ad signed-in-user show --query id -o tsv). Recibe Key Vault Secrets Officer.')
+param keyVaultAdminPrincipalId string = ''
+@allowed([
+  'User'
+  'ServicePrincipal'
+  'Group'
+])
+param keyVaultAdminPrincipalType string = 'User'
 
 var projectSlug = toLower(replace(projectName, '_', '-'))
 var envSlug = toLower(replace(environmentName, '_', '-'))
@@ -32,6 +49,16 @@ var storageAccountName = toLower(take('st${uniqueString(resourceGroup().id, proj
 var postgresServerName = take('${baseName}-pg', 63)
 var postgresHost = '${postgresServerName}.postgres.database.azure.com'
 var databaseUrl = 'postgresql+psycopg://${postgresAdminUser}:${uriComponent(postgresAdminPassword)}@${postgresHost}:5432/${postgresDatabaseName}?sslmode=require'
+var resolvedKeyVaultName = empty(keyVaultName) ? take('kv-${uniqueString(resourceGroup().id, projectName, environmentName)}', 24) : keyVaultName
+// Prefijo de referencia Key Vault; los nombres de secreto coinciden con scripts/sync_keyvault_secrets.sh.
+var kvRefPrefix = '@Microsoft.KeyVault(VaultName=${resolvedKeyVaultName};SecretName='
+var secretSettingValues = {
+  databaseUrl: useKeyVault ? '${kvRefPrefix}database-url)' : databaseUrl
+  openAiApiKey: useKeyVault ? '${kvRefPrefix}openai-api-key)' : openAiApiKey
+  adminApiKey: useKeyVault ? '${kvRefPrefix}admin-api-key)' : adminApiKey
+  appSharedSecret: useKeyVault ? '${kvRefPrefix}app-shared-secret)' : appSharedSecret
+  microsoftAppPassword: useKeyVault ? '${kvRefPrefix}microsoft-app-password)' : microsoftAppPassword
+}
 
 module storage './modules/storage.bicep' = {
   name: '${baseName}-storage'
@@ -74,7 +101,7 @@ var commonAppSettings = [
   }
   {
     name: 'DATABASE_URL'
-    value: databaseUrl
+    value: secretSettingValues.databaseUrl
   }
   {
     name: 'LLM_PROVIDER'
@@ -86,7 +113,7 @@ var commonAppSettings = [
   }
   {
     name: 'OPENAI_API_KEY'
-    value: openAiApiKey
+    value: secretSettingValues.openAiApiKey
   }
   {
     name: 'CHAT_MODEL'
@@ -102,11 +129,11 @@ var commonAppSettings = [
   }
   {
     name: 'ADMIN_API_KEY'
-    value: adminApiKey
+    value: secretSettingValues.adminApiKey
   }
   {
     name: 'APP_SHARED_SECRET'
-    value: appSharedSecret
+    value: secretSettingValues.appSharedSecret
   }
   {
     name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -153,7 +180,7 @@ module appService './modules/app-service.bicep' = {
       }
       {
         name: 'MICROSOFT_APP_PASSWORD'
-        value: microsoftAppPassword
+        value: secretSettingValues.microsoftAppPassword
       }
       {
         name: 'PYTHONPATH'
@@ -173,6 +200,7 @@ module appService './modules/app-service.bicep' = {
 
 module functions './modules/functions.bicep' = {
   name: '${baseName}-functions'
+  scope: resourceGroup(functionsResourceGroupName)
   params: {
     planName: functionsPlanName
     indexerFunctionName: indexerFunctionName
@@ -208,6 +236,21 @@ module functions './modules/functions.bicep' = {
   }
 }
 
+module keyVault './modules/keyvault.bicep' = if (useKeyVault) {
+  name: '${baseName}-keyvault'
+  params: {
+    keyVaultName: resolvedKeyVaultName
+    location: location
+    secretReaderPrincipalIds: [
+      appService.outputs.principalId
+      functions.outputs.indexerPrincipalId
+      functions.outputs.incidentsPrincipalId
+    ]
+    writerPrincipalId: keyVaultAdminPrincipalId
+    writerPrincipalType: keyVaultAdminPrincipalType
+  }
+}
+
 module bot './modules/bot.bicep' = {
   name: '${baseName}-bot'
   params: {
@@ -227,3 +270,7 @@ output postgresServerName string = postgres.outputs.serverName
 output storageAccountName string = storage.outputs.storageAccountName
 output botName string = bot.outputs.botName
 output applicationInsightsConnectionString string = appInsights.outputs.connectionString
+output keyVaultName string = useKeyVault ? resolvedKeyVaultName : ''
+output webAppPrincipalId string = appService.outputs.principalId
+output indexerFunctionPrincipalId string = functions.outputs.indexerPrincipalId
+output incidentsFunctionPrincipalId string = functions.outputs.incidentsPrincipalId

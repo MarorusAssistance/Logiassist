@@ -7,14 +7,16 @@ from typing import Any
 from internal_assistant.config import get_settings
 from internal_assistant.chat.service import ChatService
 from internal_assistant.db import session_scope
+from internal_assistant.observability.usage import UsageMeter, metering
 from internal_assistant.rag import RetrievalConfig
 
+from evaluation.cost import build_cost_section, load_pricing, render_cost_markdown, usage_row_fields
 from evaluation.judges import HeuristicJudge, LLMJudge
 from evaluation.metrics import compute_abstention_metrics, compute_answer_metrics, compute_citation_metrics
 from evaluation.runners.common import answer_recommendations, build_worst_cases, retrieval_config_to_dict, select_examples
 from evaluation.utils import (
     build_eval_request,
-    estimate_cost,
+    expand_question,
     load_questions,
     select_provider,
     write_report_bundle,
@@ -32,6 +34,59 @@ def _ordered_retrieved_source_ids(retrieved) -> list[str]:
     return ordered
 
 
+def _evaluate_scenario(
+    *,
+    service,
+    evaluator,
+    question,
+    index: int,
+    retrieval_config: RetrievalConfig,
+    pricing: dict[str, Any],
+    log: bool = False,
+) -> list[dict[str, Any]]:
+    """Ejecuta todos los turnos de un escenario. El uso se registra en el medidor activo."""
+    rows: list[dict[str, Any]] = []
+    state: dict[str, Any] = {}
+    conversation_id = 10_000 + index
+
+    for turn in expand_question(question):
+        if log:
+            print(f"[eval][answer] turn {turn.turn_id}", flush=True)
+        # Medidor por turno: se propaga al medidor del escenario/ejecucion al salir.
+        with metering() as turn_meter:
+            request = build_eval_request(turn, conversation_id=conversation_id, user_id=f"eval-user-{index}")
+            response, state, meta = service.simulate_chat(
+                request,
+                state=state,
+                retrieval_config=retrieval_config,
+            )
+            verdict = evaluator.judge(turn, response, meta)
+
+        row = {
+            "scenario_id": turn.scenario_id,
+            "turn_id": turn.turn_id,
+            "question_id": turn.turn_id,
+            "question": turn.message,
+            "category": turn.category,
+            "expected_behavior": turn.expected_behavior,
+            "expected_source_ids": list(turn.expected_source_ids),
+            "expected_source_types": list(turn.expected_source_types),
+            "expected_answer_summary": turn.expected_answer_summary,
+            "requires_clarification": turn.requires_clarification,
+            "should_create_incident": turn.should_create_incident,
+            "answer": response.answer,
+            "sources": [item.model_dump() for item in response.sources],
+            "retrieved_source_ids": _ordered_retrieved_source_ids(meta.get("retrieved", [])),
+            "retrieved_chunk_ids": [item.chunk_id for item in meta.get("retrieved", [])],
+            "latency_ms": meta.get("latency_ms", 0),
+            **usage_row_fields(turn_meter, pricing),
+            **verdict,
+        }
+        row.setdefault("issue", "")
+        rows.append(row)
+    return rows
+
+
 def _evaluate_question(
     *,
     question,
@@ -40,133 +95,32 @@ def _evaluate_question(
     retrieval_config: RetrievalConfig,
     use_llm_judge: bool,
     service_class,
+    pricing: dict[str, Any],
 ) -> dict[str, Any]:
-    from evaluation.utils import expand_question, select_provider
-
-    with session_scope() as session:
+    # Los contextvars no se propagan a los hilos del pool: cada worker abre su
+    # propio medidor y lo devuelve para combinarlo en el hilo principal.
+    with session_scope() as session, metering(propagate=False) as meter:
         llm_provider = select_provider(provider_name)
         service = service_class(session, llm_provider=llm_provider)
         evaluator = LLMJudge(session, llm_provider=llm_provider) if use_llm_judge else HeuristicJudge(session)
-        rows: list[dict[str, Any]] = []
-        total_input_tokens = 0
-        total_output_tokens = 0
-        total_embedding_tokens = 0
-        state: dict[str, Any] = {}
-        conversation_id = 10_000 + index
-
-        for turn in expand_question(question):
-            request = build_eval_request(turn, conversation_id=conversation_id, user_id=f"eval-user-{index}")
-            response, state, meta = service.simulate_chat(
-                request,
-                state=state,
-                retrieval_config=retrieval_config,
-            )
-            verdict = evaluator.judge(turn, response, meta)
-
-            context_tokens = sum(len(str(chunk.get("content", "")).split()) for chunk in meta.get("context_chunks", []))
-            input_tokens = len(turn.message.split()) + context_tokens
-            output_tokens = len((response.answer or "").split())
-            embedding_tokens = len(turn.message.split())
-            total_input_tokens += input_tokens
-            total_output_tokens += output_tokens
-            total_embedding_tokens += embedding_tokens
-
-            row = {
-                "scenario_id": turn.scenario_id,
-                "turn_id": turn.turn_id,
-                "question_id": turn.turn_id,
-                "question": turn.message,
-                "category": turn.category,
-                "expected_behavior": turn.expected_behavior,
-                "expected_source_ids": list(turn.expected_source_ids),
-                "expected_source_types": list(turn.expected_source_types),
-                "expected_answer_summary": turn.expected_answer_summary,
-                "requires_clarification": turn.requires_clarification,
-                "should_create_incident": turn.should_create_incident,
-                "answer": response.answer,
-                "sources": [item.model_dump() for item in response.sources],
-                "retrieved_source_ids": _ordered_retrieved_source_ids(meta.get("retrieved", [])),
-                "retrieved_chunk_ids": [item.chunk_id for item in meta.get("retrieved", [])],
-                "latency_ms": meta.get("latency_ms", 0),
-                **verdict,
-            }
-            row.setdefault("issue", "")
-            rows.append(row)
-
-        return {
-            "index": index,
-            "rows": rows,
-            "input_tokens": total_input_tokens,
-            "output_tokens": total_output_tokens,
-            "embedding_tokens": total_embedding_tokens,
-            "llm_provider": llm_provider,
-        }
+        rows = _evaluate_scenario(
+            service=service,
+            evaluator=evaluator,
+            question=question,
+            index=index,
+            retrieval_config=retrieval_config,
+            pricing=pricing,
+        )
+    return {"index": index, "rows": rows, "meter": meter}
 
 
-def evaluate_answers(
-    session,
-    questions,
+def _summarize_answer_rows(
+    rows: list[dict[str, Any]],
     *,
-    provider_name: str,
-    llm_provider,
-    retrieval_config: RetrievalConfig,
-    use_llm_judge: bool = False,
-    judge=None,
-    service_class=ChatService,
+    meter: UsageMeter,
+    scenarios: int,
+    pricing: dict[str, Any],
 ) -> dict[str, Any]:
-    service = service_class(session, llm_provider=llm_provider)
-    evaluator = judge or (LLMJudge(session, llm_provider=llm_provider) if use_llm_judge else HeuristicJudge(session))
-    rows: list[dict[str, Any]] = []
-
-    total_input_tokens = 0
-    total_output_tokens = 0
-    total_embedding_tokens = 0
-
-    for index, question in enumerate(questions, start=1):
-        state: dict[str, Any] = {}
-        conversation_id = 10_000 + index
-        from evaluation.utils import expand_question
-
-        expanded_turns = expand_question(question)
-        for turn in expanded_turns:
-            request = build_eval_request(turn, conversation_id=conversation_id, user_id=f"eval-user-{index}")
-            response, state, meta = service.simulate_chat(
-                request,
-                state=state,
-                retrieval_config=retrieval_config,
-            )
-            verdict = evaluator.judge(turn, response, meta)
-
-            context_tokens = sum(len(str(chunk.get("content", "")).split()) for chunk in meta.get("context_chunks", []))
-            input_tokens = len(turn.message.split()) + context_tokens
-            output_tokens = len((response.answer or "").split())
-            embedding_tokens = len(turn.message.split())
-            total_input_tokens += input_tokens
-            total_output_tokens += output_tokens
-            total_embedding_tokens += embedding_tokens
-
-            row = {
-                "scenario_id": turn.scenario_id,
-                "turn_id": turn.turn_id,
-                "question_id": turn.turn_id,
-                "question": turn.message,
-                "category": turn.category,
-                "expected_behavior": turn.expected_behavior,
-                "expected_source_ids": list(turn.expected_source_ids),
-                "expected_source_types": list(turn.expected_source_types),
-                "expected_answer_summary": turn.expected_answer_summary,
-                "requires_clarification": turn.requires_clarification,
-                "should_create_incident": turn.should_create_incident,
-                "answer": response.answer,
-                "sources": [item.model_dump() for item in response.sources],
-                "retrieved_source_ids": _ordered_retrieved_source_ids(meta.get("retrieved", [])),
-                "retrieved_chunk_ids": [item.chunk_id for item in meta.get("retrieved", [])],
-                "latency_ms": meta.get("latency_ms", 0),
-                **verdict,
-            }
-            row.setdefault("issue", "")
-            rows.append(row)
-
     answer_metrics = compute_answer_metrics(rows)
     citation_metrics = compute_citation_metrics(rows)
     abstention_metrics = compute_abstention_metrics(rows)
@@ -175,14 +129,7 @@ def evaluate_answers(
         if rows
         else 0.0
     )
-    cost_estimate = estimate_cost(
-        provider_name=provider_name,
-        chat_model=getattr(llm_provider, "settings", None).chat_model if getattr(llm_provider, "settings", None) else "",
-        embedding_model=getattr(llm_provider, "settings", None).embedding_model if getattr(llm_provider, "settings", None) else "",
-        input_tokens=total_input_tokens,
-        output_tokens=total_output_tokens,
-        embedding_tokens=total_embedding_tokens,
-    )
+    cost = build_cost_section(meter, turns=len(rows), scenarios=scenarios, pricing=pricing)
     return {
         "rows": rows,
         "aggregate_metrics": {
@@ -197,11 +144,47 @@ def evaluate_answers(
             "Abstention precision": round(float(abstention_metrics["abstention_precision"]), 4),
             "Abstention recall": round(float(abstention_metrics["abstention_recall"]), 4),
             "Average latency ms": round(float(average_latency_ms), 2),
+            "Total cost USD": cost["total_usd"],
         },
         "latency": {"average_latency_ms": average_latency_ms},
-        "cost_estimate": cost_estimate,
+        "cost": cost,
         "recommendations": answer_recommendations(answer_metrics, citation_metrics, abstention_metrics),
     }
+
+
+def evaluate_answers(
+    session,
+    questions,
+    *,
+    provider_name: str = "",
+    llm_provider,
+    retrieval_config: RetrievalConfig,
+    use_llm_judge: bool = False,
+    judge=None,
+    service_class=ChatService,
+    pricing: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    current_pricing = pricing or load_pricing()
+    service = service_class(session, llm_provider=llm_provider)
+    evaluator = judge or (LLMJudge(session, llm_provider=llm_provider) if use_llm_judge else HeuristicJudge(session))
+    rows: list[dict[str, Any]] = []
+
+    with metering() as meter:
+        for index, question in enumerate(questions, start=1):
+            print(f"[eval][answer] scenario {index}/{len(questions)} {question.id}", flush=True)
+            rows.extend(
+                _evaluate_scenario(
+                    service=service,
+                    evaluator=evaluator,
+                    question=question,
+                    index=index,
+                    retrieval_config=retrieval_config,
+                    pricing=current_pricing,
+                    log=True,
+                )
+            )
+
+    return _summarize_answer_rows(rows, meter=meter, scenarios=len(questions), pricing=current_pricing)
 
 
 def run_answer_eval(
@@ -221,92 +204,46 @@ def run_answer_eval(
     loaded_questions = questions or load_questions(dataset_path)
     owns_session = session is None
     effective_concurrency = max(1, max_concurrency or get_settings().eval_max_concurrency)
+    pricing = load_pricing()
 
     if owns_session and effective_concurrency > 1:
-        ordered_rows: list[dict[str, Any]] = []
-        total_input_tokens = 0
-        total_output_tokens = 0
-        total_embedding_tokens = 0
-        llm_provider = None
-        with ThreadPoolExecutor(max_workers=effective_concurrency) as executor:
-            futures = [
-                executor.submit(
-                    _evaluate_question,
-                    question=question,
-                    index=index,
-                    provider_name=provider_name,
-                    retrieval_config=effective_config,
-                    use_llm_judge=use_llm_judge,
-                    service_class=service_class,
-                )
-                for index, question in enumerate(loaded_questions, start=1)
-            ]
-            results = [future.result() for future in as_completed(futures)]
-        results.sort(key=lambda item: item["index"])
-        for item in results:
-            ordered_rows.extend(item["rows"])
-            total_input_tokens += item["input_tokens"]
-            total_output_tokens += item["output_tokens"]
-            total_embedding_tokens += item["embedding_tokens"]
-            llm_provider = llm_provider or item["llm_provider"]
-
-        answer_metrics = compute_answer_metrics(ordered_rows)
-        citation_metrics = compute_citation_metrics(ordered_rows)
-        abstention_metrics = compute_abstention_metrics(ordered_rows)
-        average_latency_ms = (
-            sum(float(row.get("latency_ms", 0.0)) for row in ordered_rows) / len(ordered_rows)
-            if ordered_rows
-            else 0.0
-        )
-        result = {
-            "rows": ordered_rows,
-            "aggregate_metrics": {
-                "answer": answer_metrics,
-                "citation": citation_metrics,
-                "abstention": abstention_metrics,
-            },
-            "summary": {
-                "Questions evaluated": len(ordered_rows),
-                "Behavior match": round(float(answer_metrics["answer_expected_behavior_match"]), 4),
-                "Citation coverage": round(float(citation_metrics["citation_coverage_rate"]), 4),
-                "Abstention precision": round(float(abstention_metrics["abstention_precision"]), 4),
-                "Abstention recall": round(float(abstention_metrics["abstention_recall"]), 4),
-                "Average latency ms": round(float(average_latency_ms), 2),
-            },
-            "latency": {"average_latency_ms": average_latency_ms},
-            "cost_estimate": estimate_cost(
-                provider_name=provider_name,
-                chat_model=getattr(llm_provider, "settings", None).chat_model if getattr(llm_provider, "settings", None) else "",
-                embedding_model=getattr(llm_provider, "settings", None).embedding_model if getattr(llm_provider, "settings", None) else "",
-                input_tokens=total_input_tokens,
-                output_tokens=total_output_tokens,
-                embedding_tokens=total_embedding_tokens,
-            ),
-            "recommendations": answer_recommendations(answer_metrics, citation_metrics, abstention_metrics),
-        }
-    elif owns_session:
-        provider = select_provider(provider_name)
-        with session_scope() as managed_session:
-            result = evaluate_answers(
-                managed_session,
-                loaded_questions,
-                provider_name=provider_name,
-                llm_provider=provider,
-                retrieval_config=effective_config,
-                use_llm_judge=use_llm_judge,
-                service_class=service_class,
-            )
+        with metering() as run_meter:
+            with ThreadPoolExecutor(max_workers=effective_concurrency) as executor:
+                futures = [
+                    executor.submit(
+                        _evaluate_question,
+                        question=question,
+                        index=index,
+                        provider_name=provider_name,
+                        retrieval_config=effective_config,
+                        use_llm_judge=use_llm_judge,
+                        service_class=service_class,
+                        pricing=pricing,
+                    )
+                    for index, question in enumerate(loaded_questions, start=1)
+                ]
+                results = [future.result() for future in as_completed(futures)]
+            results.sort(key=lambda item: item["index"])
+            ordered_rows: list[dict[str, Any]] = []
+            for item in results:
+                ordered_rows.extend(item["rows"])
+                run_meter.merge(item["meter"])
+        result = _summarize_answer_rows(ordered_rows, meter=run_meter, scenarios=len(loaded_questions), pricing=pricing)
     else:
         provider = select_provider(provider_name)
-        result = evaluate_answers(
-            session,
-            loaded_questions,
-            provider_name=provider_name,
-            llm_provider=provider,
-            retrieval_config=effective_config,
-            use_llm_judge=use_llm_judge,
-            service_class=service_class,
-        )
+        evaluate_kwargs = {
+            "provider_name": provider_name,
+            "llm_provider": provider,
+            "retrieval_config": effective_config,
+            "use_llm_judge": use_llm_judge,
+            "service_class": service_class,
+            "pricing": pricing,
+        }
+        if owns_session:
+            with session_scope() as managed_session:
+                result = evaluate_answers(managed_session, loaded_questions, **evaluate_kwargs)
+        else:
+            result = evaluate_answers(session, loaded_questions, **evaluate_kwargs)
 
     payload = {
         "summary": result["summary"],
@@ -322,7 +259,7 @@ def run_answer_eval(
         "worst_cases": build_worst_cases(result["rows"]),
         "recommendations": result["recommendations"],
         "latency": result["latency"],
-        "cost_estimate": result["cost_estimate"],
+        "cost": result["cost"],
     }
 
     if not write_reports:
@@ -343,7 +280,8 @@ def run_answer_eval(
         f"- Abstention precision: {result['summary']['Abstention precision']}\n"
         f"- Abstention recall: {result['summary']['Abstention recall']}\n"
         f"- Average latency: {result['summary']['Average latency ms']} ms\n\n"
-        "## Worst Cases\n"
+        + render_cost_markdown(result["cost"])
+        + "\n## Worst Cases\n"
     )
     worst_cases = build_worst_cases(result["rows"])
     report_markdown += "| question_id | question | expected_behavior | actual_behavior | issue | retrieved_sources |\n"

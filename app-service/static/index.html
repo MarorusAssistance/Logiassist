@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LogiAssist Demo Console</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div class="brand">
+            <img src="/static/brand-logo.png" class="brand-mark" alt="" aria-hidden="true" />
+            <div>
+              <p class="eyebrow">Operations command center</p>
+              <h1>LogiAssist Demo Console</h1>
+              <p class="subtitle">RAG interno para documentación, incidencias y decisiones operativas.</p>
+            </div>
+          </div>
+        </header>
+
+        <section class="chat-panel" aria-label="Conversación">
+          <div class="chat-status" id="assistantState" aria-live="polite">
+            <span class="status-dot"></span>
+            Listo para consultar conocimiento interno.
+          </div>
+          <div id="messages" class="messages" aria-live="polite"></div>
+          <form id="chatForm" class="composer">
+            <textarea
+              id="messageInput"
+              rows="3"
+              placeholder="Pregunta por un procedimiento, una incidencia conocida o un caso no resuelto..."
+              required
+            ></textarea>
+            <button id="sendButton" type="submit" class="send-button" aria-label="Enviar mensaje">
+              <span>Enviar</span>
+              <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21.7 3.3a1 1 0 0 0-1.07-.22L3.22 10.15a1 1 0 0 0 .08 1.88l7.02 2.2 2.2 7.02a1 1 0 0 0 1.88.08l7.08-17.42a1 1 0 0 0-.22-1.07ZM5.95 11.05l11.23-4.56-6.34 6.34-4.89-1.78Zm7 7-1.78-4.89 6.34-6.34-4.56 11.23Z" />
+              </svg>
+            </button>
+          </form>
+        </section>
+      </section>
+
+      <aside class="side-panel" aria-label="Demo kit">
+        <div class="side-scroll">
+          <section class="demo-hero panel-section">
+            <p class="eyebrow">Demo kit</p>
+            <h2>Empieza con un flujo guiado</h2>
+            <p class="hint">
+              Los sistemas son ficticios y representan una empresa logística demo. Usa estos accesos para enseñar
+              documentación, incidencias, aclaraciones y feedback sin memorizar nombres.
+            </p>
+            <div id="starterActions" class="starter-actions"></div>
+            <button id="surpriseButton" type="button" class="ghost-button">No sé qué preguntar</button>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Sistemas disponibles</h2>
+              <span class="counter">10</span>
+            </div>
+            <div id="systems" class="system-list"></div>
+          </section>
+
+          <section class="panel-section scenario-section">
+            <div class="section-title">
+              <h2>Preguntas recomendadas</h2>
+              <button id="resetButton" type="button" class="text-button">Nueva conversación</button>
+            </div>
+            <div id="samples" class="sample-list"></div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Fuentes de la última respuesta</h2>
+              <span id="sourceCount" class="counter">0</span>
+            </div>
+            <div id="sources" class="source-list empty">Esta respuesta no incluye fuentes todavía.</div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <h2>Feedback</h2>
+            </div>
+            <div class="feedback-actions">
+              <button id="usefulButton" type="button" class="feedback-button" disabled>Útil</button>
+              <button id="notUsefulButton" type="button" class="feedback-button" disabled>No útil</button>
+            </div>
+            <p id="feedbackStatus" class="hint">Disponible tras recibir una respuesta.</p>
+          </section>
+
+        </div>
+      </aside>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

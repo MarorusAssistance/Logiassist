@@ -69,6 +69,7 @@ def _chunk_text(text: str, metadata: dict, target_size: int = 900, overlap: int 
 def build_chunks_for_document(document) -> list[ChunkPayload]:
     metadata = {
         "title": document.title,
+        "document_type": getattr(document, "document_type", None),
         "department": document.department,
         "affected_system": document.affected_system,
         "tags": document.tags,
@@ -94,6 +95,7 @@ def build_chunks_for_incident(incident) -> list[ChunkPayload]:
         "title": incident.title,
         "department": incident.department,
         "affected_system": incident.affected_system,
+        "status": incident.status,
         "tags": incident.tags,
         "source_url": incident.source_url,
         "is_resolved": incident.is_resolved,
