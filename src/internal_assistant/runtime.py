@@ -46,6 +46,11 @@ def validate_runtime_settings(settings: Settings, *, require_bot: bool | None = 
         errors.append("OPENAI_API_KEY es obligatorio cuando LLM_PROVIDER=openai")
     elif provider == "openai_compatible" and not settings.llm_base_url.strip():
         errors.append("LLM_BASE_URL es obligatorio cuando LLM_PROVIDER=openai_compatible")
+    elif provider == "azure_foundry":
+        if _is_placeholder(settings.azure_ai_api_key):
+            errors.append("AZURE_AI_API_KEY es obligatorio cuando LLM_PROVIDER=azure_foundry")
+        if not (settings.azure_ai_resource.strip() or settings.azure_ai_base_url.strip()):
+            errors.append("AZURE_AI_RESOURCE o AZURE_AI_BASE_URL es obligatorio cuando LLM_PROVIDER=azure_foundry")
     elif provider == "anthropic_foundry":
         if _is_placeholder(settings.anthropic_foundry_api_key):
             errors.append("ANTHROPIC_FOUNDRY_API_KEY es obligatorio cuando LLM_PROVIDER=anthropic_foundry")

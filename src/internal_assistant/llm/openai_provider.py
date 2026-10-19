@@ -248,6 +248,9 @@ def normalize_provider_name(value: str) -> str:
         "local": "openai_compatible",
         "anthropic-foundry": "anthropic_foundry",
         "foundry": "anthropic_foundry",
+        "azure": "azure_foundry",
+        "azure_openai": "azure_foundry",
+        "azure-foundry": "azure_foundry",
     }
     return aliases.get(normalized, normalized)
 
@@ -290,6 +293,11 @@ def build_default_provider() -> LLMProvider:
             "LLM_PROVIDER=openai_compatible|anthropic_foundry + EMBEDDINGS_PROVIDER=openai"
         )
 
+    if provider == "azure_foundry":
+        # Import diferido: AzureOpenAIProvider hereda de OpenAIProvider (este modulo).
+        from internal_assistant.llm.azure_openai_provider import AzureOpenAIProvider
+
+        return AzureOpenAIProvider()
     if provider == "mock":
         return MockLLMProvider()
     if provider == "openai":
