@@ -1,3 +1,4 @@
+from .anthropic_foundry_provider import AnthropicFoundryProvider
 from .azure_openai_provider import AzureOpenAIProvider
 from .base import LLMProvider
 from .mock_provider import MockLLMProvider
@@ -6,6 +7,7 @@ from .openai_provider import OpenAIProvider, SplitLLMProvider, build_default_pro
 from .streaming import ChatStreamEvent, JsonAnswerStreamExtractor
 
 __all__ = [
+    "AnthropicFoundryProvider",
     "AzureOpenAIProvider",
     "ChatStreamEvent",
     "JsonAnswerStreamExtractor",

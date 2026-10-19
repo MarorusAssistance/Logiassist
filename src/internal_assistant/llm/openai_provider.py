@@ -14,6 +14,7 @@ from internal_assistant.llm.common import (
     validate_embedding_dimensions,
 )
 from internal_assistant.llm.streaming import ChatStreamEvent, JsonAnswerStreamExtractor
+from internal_assistant.llm.anthropic_foundry_provider import AnthropicFoundryProvider
 from internal_assistant.llm.mock_provider import MockLLMProvider
 from internal_assistant.llm.openai_compatible_provider import OpenAICompatibleProvider
 from internal_assistant.observability.tracing import set_span_attributes, start_span
@@ -245,6 +246,8 @@ def normalize_provider_name(value: str) -> str:
     aliases = {
         "openai-compatible": "openai_compatible",
         "local": "openai_compatible",
+        "anthropic-foundry": "anthropic_foundry",
+        "foundry": "anthropic_foundry",
     }
     return aliases.get(normalized, normalized)
 
@@ -273,10 +276,18 @@ def build_default_provider() -> LLMProvider:
             embeddings_provider=OpenAIProvider(),
             chat_provider=OpenAICompatibleProvider(),
         )
+    if provider == "anthropic_foundry":
+        # Claude no tiene embeddings: siempre se combinan con los de OpenAI.
+        if embeddings_provider not in {"openai", "anthropic_foundry"}:
+            raise ValueError("LLM_PROVIDER=anthropic_foundry requiere EMBEDDINGS_PROVIDER=openai")
+        return SplitLLMProvider(
+            embeddings_provider=OpenAIProvider(),
+            chat_provider=AnthropicFoundryProvider(),
+        )
     if embeddings_provider != provider:
         raise ValueError(
-            "EMBEDDINGS_PROVIDER debe coincidir con LLM_PROVIDER, usar auto, "
-            "o una combinacion soportada: LLM_PROVIDER=openai_compatible + EMBEDDINGS_PROVIDER=openai"
+            "EMBEDDINGS_PROVIDER debe coincidir con LLM_PROVIDER, usar auto, o una combinacion soportada: "
+            "LLM_PROVIDER=openai_compatible|anthropic_foundry + EMBEDDINGS_PROVIDER=openai"
         )
 
     if provider == "mock":

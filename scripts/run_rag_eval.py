@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=("mock", "openai", "openai_compatible"),
+        choices=("mock", "openai", "openai_compatible", "anthropic_foundry"),
         default=os.getenv("EVAL_PROVIDER", "mock"),
     )
     parser.add_argument("--include-adversarial", action="store_true")

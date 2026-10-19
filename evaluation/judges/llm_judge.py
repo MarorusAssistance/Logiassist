@@ -6,6 +6,7 @@ from typing import Any
 from openai import BadRequestError
 
 from internal_assistant.llm import build_default_provider
+from internal_assistant.llm.anthropic_foundry_provider import AnthropicFoundryProvider, judge_payload
 from internal_assistant.observability.usage import record_chat_usage
 from internal_assistant.schemas import ChatResponse
 
@@ -24,8 +25,9 @@ class LLMJudge(BaseJudge):
         self.client = getattr(chat_provider, "client", None)
         self.model = getattr(getattr(chat_provider, "settings", None), "chat_model", None)
         self.provider_name = getattr(chat_provider, "provider_name", "openai")
+        self.chat_provider = chat_provider
         if self.client is None or self.model is None:
-            raise ValueError("LLMJudge requiere un proveedor compatible con cliente OpenAI")
+            raise ValueError("LLMJudge requiere un proveedor con cliente OpenAI o Anthropic")
 
     def judge(self, turn: ExpandedEvaluationTurn, response: ChatResponse, meta: dict[str, Any]) -> dict[str, Any]:
         base = self.heuristic.judge(turn, response, meta)
@@ -48,6 +50,17 @@ class LLMJudge(BaseJudge):
             },
             {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
         ]
+        if isinstance(self.chat_provider, AnthropicFoundryProvider):
+            # judge_payload registra el uso con purpose="judge".
+            payload = judge_payload(self.chat_provider, messages)
+            base.update(
+                {
+                    "llm_score": float(payload.get("llm_score", 0.0)),
+                    "llm_verdict": payload.get("llm_verdict", "fail"),
+                    "llm_reason": payload.get("llm_reason", ""),
+                }
+            )
+            return base
         try:
             completion = self.client.chat.completions.create(
                 model=self.model,

@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
     embedding_dimensions: int = Field(default=512, alias="EMBEDDING_DIMENSIONS")
     llm_timeout_seconds: float = Field(default=120.0, alias="LLM_TIMEOUT_SECONDS")
+    llm_effort: str = Field(default="low", alias="LLM_EFFORT")
+    anthropic_foundry_api_key: str = Field(default="", alias="ANTHROPIC_FOUNDRY_API_KEY")
+    anthropic_foundry_resource: str = Field(default="", alias="ANTHROPIC_FOUNDRY_RESOURCE")
+    anthropic_foundry_base_url: str = Field(default="", alias="ANTHROPIC_FOUNDRY_BASE_URL")
     admin_api_key: str = Field(default="change-this-admin-key", alias="ADMIN_API_KEY")
     app_shared_secret: str = Field(default="change-this-shared-secret", alias="APP_SHARED_SECRET")
     applicationinsights_connection_string: str = Field(

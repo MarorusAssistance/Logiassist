@@ -45,6 +45,7 @@ if use_key_vault; then
   MICROSOFT_APP_PASSWORD="$(secret_setting MICROSOFT_APP_PASSWORD)"
   RERANKER_API_KEY="$(secret_setting RERANKER_API_KEY)"
   LANGSMITH_API_KEY="$(secret_setting LANGSMITH_API_KEY)"
+  ANTHROPIC_FOUNDRY_API_KEY="$(secret_setting ANTHROPIC_FOUNDRY_API_KEY)"
   echo "Usando referencias Key Vault (${KEY_VAULT_NAME}) para: ${KV_REQUIRED_SECRET_VARS[*]} ${KV_OPTIONAL_SECRET_VARS[*]}"
 else
   echo "AVISO: USE_KEY_VAULT=false; los secretos se guardan en claro en App Settings." >&2
@@ -60,6 +61,11 @@ ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-${DEFAULT_ALLOWED_ORIGINS}}"
 APP_ENV="${APP_ENV:-demo}"
 APP_NAME="${APP_NAME:-internal-assistant-mvp}"
 LOG_LEVEL="${LOG_LEVEL:-INFO}"
+# Las Functions solo generan embeddings: no necesitan el proveedor de chat de Claude.
+FUNCTIONS_LLM_PROVIDER="${LLM_PROVIDER:-openai}"
+if [[ "${FUNCTIONS_LLM_PROVIDER}" == "anthropic_foundry" ]]; then
+  FUNCTIONS_LLM_PROVIDER="${EMBEDDINGS_PROVIDER:-openai}"
+fi
 
 az webapp config appsettings set \
   --resource-group "${AZURE_RESOURCE_GROUP}" \
@@ -72,6 +78,9 @@ az webapp config appsettings set \
     EMBEDDINGS_PROVIDER="${EMBEDDINGS_PROVIDER:-openai}" \
     OPENAI_API_KEY="${OPENAI_API_KEY}" \
     CHAT_MODEL="${CHAT_MODEL}" \
+    LLM_EFFORT="${LLM_EFFORT:-low}" \
+    ANTHROPIC_FOUNDRY_RESOURCE="${ANTHROPIC_FOUNDRY_RESOURCE:-}" \
+    ANTHROPIC_FOUNDRY_API_KEY="${ANTHROPIC_FOUNDRY_API_KEY:-}" \
     EMBEDDING_MODEL="${EMBEDDING_MODEL}" \
     EMBEDDING_DIMENSIONS="${EMBEDDING_DIMENSIONS}" \
     RERANKER_ENABLED="${RERANKER_ENABLED:-false}" \
@@ -114,7 +123,7 @@ for function_app in "${AZURE_INDEXER_FUNCTION_NAME}" "${AZURE_INCIDENTS_FUNCTION
       APP_ENV="${APP_ENV}" \
       APP_NAME="${APP_NAME}" \
       DATABASE_URL="${DATABASE_URL}" \
-      LLM_PROVIDER="${LLM_PROVIDER:-openai}" \
+      LLM_PROVIDER="${FUNCTIONS_LLM_PROVIDER}" \
       EMBEDDINGS_PROVIDER="${EMBEDDINGS_PROVIDER:-openai}" \
       OPENAI_API_KEY="${OPENAI_API_KEY}" \
       CHAT_MODEL="${CHAT_MODEL}" \
