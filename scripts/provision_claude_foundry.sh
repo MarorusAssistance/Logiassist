@@ -10,6 +10,10 @@
 #   CLAUDE_MODEL_VERSION        (por defecto 2 = "Hosted on Azure")
 #   CLAUDE_DEPLOYMENT_NAME      (por defecto igual al modelo; es el CHAT_MODEL de la app)
 #   CLAUDE_DEPLOYMENT_CAPACITY  (por defecto 20, dentro de la cuota de la suscripcion)
+# Obligatorias para modelos de Anthropic (datos del alta en Azure Marketplace, modelProviderData):
+#   CLAUDE_ORG_NAME             nombre de tu organizacion
+#   CLAUDE_INDUSTRY             sector en minusculas (p. ej. technology)
+#   CLAUDE_COUNTRY_CODE         pais en ISO de 2 letras (p. ej. ES)
 set -euo pipefail
 
 AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rg-internal-assistant-demo}"
@@ -40,16 +44,22 @@ if az cognitiveservices account deployment show -n "${FOUNDRY_RESOURCE_NAME}" -g
   --deployment-name "${CLAUDE_DEPLOYMENT_NAME}" -o none 2>/dev/null; then
   echo "Deployment ${CLAUDE_DEPLOYMENT_NAME} ya existe."
 else
+  : "${CLAUDE_ORG_NAME:?Define CLAUDE_ORG_NAME}" "${CLAUDE_INDUSTRY:?Define CLAUDE_INDUSTRY}" "${CLAUDE_COUNTRY_CODE:?Define CLAUDE_COUNTRY_CODE}"
   echo "Desplegando ${CLAUDE_MODEL_NAME} v${CLAUDE_MODEL_VERSION} (GlobalStandard, capacidad ${CLAUDE_DEPLOYMENT_CAPACITY})..."
-  az cognitiveservices account deployment create \
-    --name "${FOUNDRY_RESOURCE_NAME}" \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --deployment-name "${CLAUDE_DEPLOYMENT_NAME}" \
-    --model-format Anthropic \
-    --model-name "${CLAUDE_MODEL_NAME}" \
-    --model-version "${CLAUDE_MODEL_VERSION}" \
-    --sku-name GlobalStandard \
-    --sku-capacity "${CLAUDE_DEPLOYMENT_CAPACITY}" -o none
+  # `az cognitiveservices account deployment create` aun no admite modelProviderData: se usa la API REST.
+  account_id="$(az cognitiveservices account show -n "${FOUNDRY_RESOURCE_NAME}" -g "${AZURE_RESOURCE_GROUP}" --query id -o tsv | tr -d '\r')"
+  body="$(python3 -c 'import json,sys; a=sys.argv; print(json.dumps({"sku":{"name":"GlobalStandard","capacity":int(a[4])},"properties":{"model":{"format":"Anthropic","name":a[1],"version":a[2]},"modelProviderData":{"industry":a[5],"organizationName":a[6],"countryCode":a[7]}}}))' \
+    "${CLAUDE_MODEL_NAME}" "${CLAUDE_MODEL_VERSION}" "_" "${CLAUDE_DEPLOYMENT_CAPACITY}" "${CLAUDE_INDUSTRY}" "${CLAUDE_ORG_NAME}" "${CLAUDE_COUNTRY_CODE}")"
+  az rest --method put \
+    --url "https://management.azure.com${account_id}/deployments/${CLAUDE_DEPLOYMENT_NAME}?api-version=2025-10-01-preview" \
+    --headers "Content-Type=application/json" \
+    --body "${body}" -o none
+  for _ in $(seq 1 30); do
+    state="$(az cognitiveservices account deployment show -n "${FOUNDRY_RESOURCE_NAME}" -g "${AZURE_RESOURCE_GROUP}" \
+      --deployment-name "${CLAUDE_DEPLOYMENT_NAME}" --query properties.provisioningState -o tsv 2>/dev/null | tr -d '\r')"
+    [[ "${state}" == "Succeeded" || "${state}" == "Failed" ]] && break
+    sleep 10
+  done
 fi
 
 az cognitiveservices account deployment show -n "${FOUNDRY_RESOURCE_NAME}" -g "${AZURE_RESOURCE_GROUP}" \
