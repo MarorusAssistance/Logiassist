@@ -156,6 +156,28 @@ dependencies
 | summarize errors=countif(success == false), calls=count() by name, tostring(customDimensions["llm.provider"]), tostring(customDimensions["llm.model"])
 ```
 
+## Coste de cada evaluacion
+
+Cada reporte (`answer_eval`, `retrieval_eval`, `rag_full_eval` y `ablation_eval`) incluye una seccion `cost` en el JSON y una seccion `## Cost` en el Markdown con el coste real de esa ejecucion.
+
+Que cubre:
+
+- chat LLM separado por proposito: `planner`, `answer` y `judge` (solo si `--use-llm-judge`), con tokens de entrada, entrada cacheada y salida
+- embeddings de las consultas (`embedding`)
+- reranker (`rerank`): search units facturadas por Cohere o peticiones al reranker local BGE
+
+Como se calcula:
+
+- los providers registran el `usage` que devuelve la API (`prompt_tokens`, `prompt_tokens_details.cached_tokens`, `completion_tokens`; en streaming se pide `stream_options.include_usage`). Cohere devuelve `meta.billed_units.search_units`; si falta se cuenta 1 por peticion
+- el registro solo esta activo dentro de la evaluacion (`internal_assistant.observability.usage.metering`); en produccion es un no-op
+- los precios estan en `evaluation/pricing.json` (USD por 1M tokens, USD por 1K search units para rerank) con fuente y fecha en `_meta`. Se puede usar otra tabla con `EVAL_PRICING_PATH`
+- los tokens cacheados se cobran al precio de `cached_input_per_1m`; `mock`, `openai_compatible` y el reranker `http` local cuestan 0 pero se registran sus tokens/peticiones
+- un modelo sin precio no rompe la evaluacion: su fila sale con `usd: null`, `complete: false` y una nota
+
+El reporte muestra total, desglose por componente/proposito, media por turno y por escenario, y en `per_question_results` cada turno lleva `cost_usd`, `chat_input_tokens`, `chat_cached_input_tokens`, `chat_output_tokens`, `embedding_tokens` y `rerank_search_units`. El reporte completo anade `phases_usd` (retrieval, answer, adversarial, ablation).
+
+No incluye costes de infraestructura (PostgreSQL, App Service) ni el indexado previo del corpus.
+
 ## Como evitar gastar tokens
 
 - usa `mock` para smoke tests

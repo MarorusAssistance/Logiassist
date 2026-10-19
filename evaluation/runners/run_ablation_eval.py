@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Any
 
 from internal_assistant.chat.service import ChatService
+from internal_assistant.observability.usage import metering
 
+from evaluation.cost import build_cost_section, merge_cost_phases, render_cost_markdown
 from evaluation.runners.common import ABLATION_CONFIGS, retrieval_recommendations
 from evaluation.runners.run_answer_eval import run_answer_eval
 from evaluation.runners.run_retrieval_eval import run_retrieval_eval
@@ -26,45 +28,53 @@ def run_ablation_eval(
     loaded_questions = questions or load_questions(dataset_path)
     comparison_rows: list[dict[str, Any]] = []
 
-    for config_name, retrieval_config in ABLATION_CONFIGS:
-        retrieval_report = run_retrieval_eval(
-            dataset_path=dataset_path,
-            output_dir=output_dir,
-            provider_name=provider_name,
-            retrieval_config=retrieval_config,
-            session=session,
-            questions=loaded_questions,
-            write_reports=False,
-            service_class=service_class,
-        )
-        citation_coverage_rate = 0.0
-        if include_answer_eval:
-            answer_report = run_answer_eval(
+    phase_costs: dict[str, dict[str, Any]] = {}
+    evaluated_turns = 0
+    with metering() as meter:
+        for config_name, retrieval_config in ABLATION_CONFIGS:
+            retrieval_report = run_retrieval_eval(
                 dataset_path=dataset_path,
                 output_dir=output_dir,
                 provider_name=provider_name,
                 retrieval_config=retrieval_config,
                 session=session,
                 questions=loaded_questions,
-                use_llm_judge=False,
                 write_reports=False,
                 service_class=service_class,
             )
-            citation_coverage_rate = float(answer_report["aggregate_metrics"]["citation"]["citation_coverage_rate"])
+            citation_coverage_rate = 0.0
+            config_cost = float(retrieval_report["cost"]["total_usd"])
+            evaluated_turns += len(retrieval_report["per_question_results"])
+            if include_answer_eval:
+                answer_report = run_answer_eval(
+                    dataset_path=dataset_path,
+                    output_dir=output_dir,
+                    provider_name=provider_name,
+                    retrieval_config=retrieval_config,
+                    session=session,
+                    questions=loaded_questions,
+                    use_llm_judge=False,
+                    write_reports=False,
+                    service_class=service_class,
+                )
+                citation_coverage_rate = float(answer_report["aggregate_metrics"]["citation"]["citation_coverage_rate"])
+                config_cost += float(answer_report["cost"]["total_usd"])
 
-        metrics = retrieval_report["aggregate_metrics"]
-        comparison_rows.append(
-            {
-                "config_name": config_name,
-                "hit_at_1": float(metrics["hit_at_1"]),
-                "hit_at_3": float(metrics["hit_at_3"]),
-                "hit_at_5": float(metrics["hit_at_5"]),
-                "recall_at_5": float(metrics["recall_at_5"]),
-                "mrr": float(metrics["mrr"]),
-                "citation_coverage_rate": citation_coverage_rate,
-                "average_latency_ms": float(metrics["average_latency_ms"]),
-            }
-        )
+            metrics = retrieval_report["aggregate_metrics"]
+            comparison_rows.append(
+                {
+                    "config_name": config_name,
+                    "hit_at_1": float(metrics["hit_at_1"]),
+                    "hit_at_3": float(metrics["hit_at_3"]),
+                    "hit_at_5": float(metrics["hit_at_5"]),
+                    "recall_at_5": float(metrics["recall_at_5"]),
+                    "mrr": float(metrics["mrr"]),
+                    "citation_coverage_rate": citation_coverage_rate,
+                    "average_latency_ms": float(metrics["average_latency_ms"]),
+                    "cost_usd": round(config_cost, 8),
+                }
+            )
+            phase_costs[config_name] = {"total_usd": round(config_cost, 8)}
 
     comparison_rows.sort(
         key=lambda row: (
@@ -75,6 +85,10 @@ def run_ablation_eval(
         reverse=True,
     )
     best = comparison_rows[0] if comparison_rows else None
+    cost = merge_cost_phases(
+        build_cost_section(meter, turns=evaluated_turns, scenarios=len(loaded_questions) * len(ABLATION_CONFIGS)),
+        phase_costs,
+    )
     recommendations = []
     if best:
         recommendations.append(
@@ -103,11 +117,7 @@ def run_ablation_eval(
             if comparison_rows
             else 0.0
         },
-        "cost_estimate": {
-            "provider": provider_name,
-            "estimated_usd": 0.0 if provider_name == "mock" else None,
-            "note": "La ablacion reutiliza retrieval y answer eval; revisa los reportes parciales si necesitas coste detallado.",
-        },
+        "cost": cost,
     }
 
     if not write_reports:
@@ -124,13 +134,14 @@ def run_ablation_eval(
     markdown += f"- Configurations compared: {payload['summary']['Configurations compared']}\n"
     markdown += f"- Best config: {payload['summary']['Best config']}\n\n"
     markdown += "## Comparison\n"
-    markdown += "| config_name | hit_at_1 | hit_at_3 | hit_at_5 | recall_at_5 | mrr | citation_coverage_rate | average_latency_ms |\n"
-    markdown += "| --- | --- | --- | --- | --- | --- | --- | --- |\n"
+    markdown += "| config_name | hit_at_1 | hit_at_3 | hit_at_5 | recall_at_5 | mrr | citation_coverage_rate | average_latency_ms | cost_usd |\n"
+    markdown += "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"
     for row in comparison_rows:
         markdown += (
             f"| {row['config_name']} | {row['hit_at_1']:.4f} | {row['hit_at_3']:.4f} | {row['hit_at_5']:.4f} | "
-            f"{row['recall_at_5']:.4f} | {row['mrr']:.4f} | {row['citation_coverage_rate']:.4f} | {row['average_latency_ms']:.2f} |\n"
+            f"{row['recall_at_5']:.4f} | {row['mrr']:.4f} | {row['citation_coverage_rate']:.4f} | {row['average_latency_ms']:.2f} | {row['cost_usd']:.6f} |\n"
         )
+    markdown += "\n" + render_cost_markdown(cost)
     markdown += "\n## Recommendations\n"
     for item in recommendations:
         markdown += f"- {item}\n"

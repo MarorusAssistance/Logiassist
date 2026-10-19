@@ -11,6 +11,8 @@ from internal_assistant.schemas.chat import AssistantDecision, ChatPlan
 
 
 class MockLLMProvider(LLMProvider):
+    provider_name = "mock"
+
     def __init__(
         self,
         clarification_phrase: str = "Necesito un poco mas de detalle para responder con seguridad.",

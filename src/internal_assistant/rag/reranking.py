@@ -7,6 +7,7 @@ from typing import Protocol
 import httpx
 
 from internal_assistant.config import get_settings
+from internal_assistant.observability.usage import record_usage
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,8 @@ class RerankerProvider(Protocol):
 
 
 class HttpRerankerProvider:
+    provider_name = "http"
+
     def __init__(self, *, base_url: str, model: str, timeout_seconds: float) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -39,6 +42,8 @@ class HttpRerankerProvider:
         )
         response.raise_for_status()
         payload = response.json()
+        # Reranker local (BGE): se registra la peticion; su coste es 0.
+        record_usage(component="reranker", purpose="rerank", provider=self.provider_name, model=self.model, search_units=0)
         results = []
         for item in payload.get("results") or []:
             results.append(RerankResult(chunk_id=int(item["id"]), score=float(item["score"])))
@@ -46,6 +51,8 @@ class HttpRerankerProvider:
 
 
 class CohereAzureRerankerProvider:
+    provider_name = "cohere_azure"
+
     def __init__(self, *, base_url: str, api_key: str, model: str, timeout_seconds: float) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -113,6 +120,13 @@ class CohereAzureRerankerProvider:
             )
         response.raise_for_status()
         payload = response.json()
+        record_usage(
+            component="reranker",
+            purpose="rerank",
+            provider=self.provider_name,
+            model=self.model,
+            search_units=_billed_search_units(payload),
+        )
         results = []
         for item in payload.get("results") or []:
             index = int(item["index"])
@@ -121,6 +135,17 @@ class CohereAzureRerankerProvider:
             score = item.get("relevance_score", item.get("score", 0.0))
             results.append(RerankResult(chunk_id=chunk_ids[index], score=float(score)))
         return results
+
+
+def _billed_search_units(payload: dict) -> float:
+    """Cohere factura por search units (`meta.billed_units.search_units`); si no viene, 1 por peticion."""
+    meta = payload.get("meta") if isinstance(payload, dict) else None
+    billed = (meta or {}).get("billed_units") or {}
+    try:
+        units = float(billed.get("search_units") or 0)
+    except (TypeError, ValueError):
+        units = 0.0
+    return units if units > 0 else 1.0
 
 
 def build_default_reranker() -> RerankerProvider | None:

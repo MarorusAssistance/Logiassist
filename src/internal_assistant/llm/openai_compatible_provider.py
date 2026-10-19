@@ -15,6 +15,7 @@ from internal_assistant.llm.common import (
 )
 from internal_assistant.llm.streaming import ChatStreamEvent, JsonAnswerStreamExtractor
 from internal_assistant.observability.tracing import set_span_attributes, start_span
+from internal_assistant.observability.usage import record_chat_usage, record_embedding_usage
 from internal_assistant.schemas.chat import AssistantDecision, ChatPlan
 
 
@@ -22,6 +23,8 @@ EMBEDDING_BATCH_SIZE = 32
 
 
 class OpenAICompatibleProvider(LLMProvider):
+    provider_name = "openai_compatible"
+
     def __init__(self) -> None:
         settings = get_settings()
         if not settings.llm_base_url:
@@ -52,6 +55,11 @@ class OpenAICompatibleProvider(LLMProvider):
                     model=self.settings.embedding_model,
                     input=batch,
                 )
+                record_embedding_usage(
+                    getattr(response, "usage", None),
+                    provider=self.provider_name,
+                    model=self.settings.embedding_model,
+                )
                 embeddings.extend(item.embedding for item in response.data)
             validated = validate_embedding_dimensions(embeddings, self.settings.embedding_dimensions)
             set_span_attributes(span, {"llm.embedding_output_count": len(validated)})
@@ -76,6 +84,12 @@ class OpenAICompatibleProvider(LLMProvider):
                     context_chunks=context_chunks,
                     conversation_state=conversation_state,
                 ),
+            )
+            record_chat_usage(
+                getattr(response, "usage", None),
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                purpose="answer",
             )
             decision = parse_assistant_decision(response.choices[0].message.content)
             set_span_attributes(
@@ -117,11 +131,22 @@ class OpenAICompatibleProvider(LLMProvider):
                     conversation_state=conversation_state,
                 ),
             )
+            stream_usage = None
             for chunk in stream:
+                # Con include_usage, el ultimo chunk trae `usage` y `choices` vacio.
+                if getattr(chunk, "usage", None) is not None:
+                    stream_usage = chunk.usage
                 delta = chunk.choices[0].delta.content if chunk.choices else None
                 for token in extractor.feed(delta or ""):
                     yield ChatStreamEvent(kind="token", text=token)
 
+            if stream_usage is not None:
+                record_chat_usage(
+                    stream_usage,
+                    provider=self.provider_name,
+                    model=self.settings.chat_model,
+                    purpose="answer",
+                )
             decision = parse_assistant_decision(extractor.raw_json)
             set_span_attributes(
                 span,
@@ -154,6 +179,12 @@ class OpenAICompatibleProvider(LLMProvider):
                     recent_messages=recent_messages,
                     conversation_state=conversation_state,
                 ),
+            )
+            record_chat_usage(
+                getattr(response, "usage", None),
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                purpose="planner",
             )
             plan = parse_chat_plan(response.choices[0].message.content, fallback_message=message)
             set_span_attributes(

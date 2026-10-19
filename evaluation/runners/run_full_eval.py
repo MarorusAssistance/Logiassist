@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from internal_assistant.chat.service import ChatService
+from internal_assistant.observability.usage import metering
 from internal_assistant.rag import RetrievalConfig
 
+from evaluation.cost import build_cost_section, merge_cost_phases, render_cost_markdown
 from evaluation.runners.common import build_worst_cases, select_examples
 from evaluation.runners.run_ablation_eval import run_ablation_eval
 from evaluation.runners.run_answer_eval import run_answer_eval
@@ -45,41 +47,25 @@ def run_full_eval(
 ) -> dict[str, Any]:
     effective_config = (retrieval_config or RetrievalConfig()).normalized()
 
-    print("[eval] fase 1/3: retrieval primary (embeddings + DB, no LM Studio)", flush=True)
-    retrieval_report = run_retrieval_eval(
-        dataset_path=dataset_path,
-        output_dir=output_dir,
-        provider_name=provider_name,
-        retrieval_config=effective_config,
-        session=session,
-        questions=None,
-        max_concurrency=max_concurrency,
-        write_reports=False,
-        service_class=service_class,
-    )
-    print("[eval] fase 1/3 completada", flush=True)
+    # Las fases anidan sus propios medidores y propagan el uso a este.
+    with metering() as meter:
+        print("[eval] fase 1/3: retrieval primary (embeddings + DB, no LM Studio)", flush=True)
+        retrieval_report = run_retrieval_eval(
+            dataset_path=dataset_path,
+            output_dir=output_dir,
+            provider_name=provider_name,
+            retrieval_config=effective_config,
+            session=session,
+            questions=None,
+            max_concurrency=max_concurrency,
+            write_reports=False,
+            service_class=service_class,
+        )
+        print("[eval] fase 1/3 completada", flush=True)
 
-    print("[eval] fase 2/3: answer primary (chat + judge si esta activo)", flush=True)
-    answer_report = run_answer_eval(
-        dataset_path=dataset_path,
-        output_dir=output_dir,
-        provider_name=provider_name,
-        retrieval_config=effective_config,
-        session=session,
-        questions=None,
-        use_llm_judge=use_llm_judge,
-        max_concurrency=max_concurrency,
-        write_reports=False,
-        service_class=service_class,
-    )
-    print("[eval] fase 2/3 completada", flush=True)
-
-    adversarial_report = None
-    adversarial_metrics: dict[str, float] = {}
-    if include_adversarial and adversarial_dataset_path:
-        print("[eval] fase 3/3: answer adversarial", flush=True)
-        adversarial_report = run_answer_eval(
-            dataset_path=adversarial_dataset_path,
+        print("[eval] fase 2/3: answer primary (chat + judge si esta activo)", flush=True)
+        answer_report = run_answer_eval(
+            dataset_path=dataset_path,
             output_dir=output_dir,
             provider_name=provider_name,
             retrieval_config=effective_config,
@@ -90,25 +76,57 @@ def run_full_eval(
             write_reports=False,
             service_class=service_class,
         )
-        adversarial_metrics = _compute_adversarial_metrics(adversarial_report["per_question_results"])
-        print("[eval] fase 3/3 completada", flush=True)
+        print("[eval] fase 2/3 completada", flush=True)
 
-    ablation_report = None
-    if include_ablation:
-        ablation_report = run_ablation_eval(
-            dataset_path=dataset_path,
-            output_dir=output_dir,
-            provider_name=provider_name,
-            session=session,
-            questions=load_questions(dataset_path),
-            include_answer_eval=True,
-            write_reports=False,
-            service_class=service_class,
-        )
+        adversarial_report = None
+        adversarial_metrics: dict[str, float] = {}
+        if include_adversarial and adversarial_dataset_path:
+            print("[eval] fase 3/3: answer adversarial", flush=True)
+            adversarial_report = run_answer_eval(
+                dataset_path=adversarial_dataset_path,
+                output_dir=output_dir,
+                provider_name=provider_name,
+                retrieval_config=effective_config,
+                session=session,
+                questions=None,
+                use_llm_judge=use_llm_judge,
+                max_concurrency=max_concurrency,
+                write_reports=False,
+                service_class=service_class,
+            )
+            adversarial_metrics = _compute_adversarial_metrics(adversarial_report["per_question_results"])
+            print("[eval] fase 3/3 completada", flush=True)
+
+        ablation_report = None
+        if include_ablation:
+            ablation_report = run_ablation_eval(
+                dataset_path=dataset_path,
+                output_dir=output_dir,
+                provider_name=provider_name,
+                session=session,
+                questions=load_questions(dataset_path),
+                include_answer_eval=True,
+                write_reports=False,
+                service_class=service_class,
+            )
 
     answer_rows = list(answer_report["per_question_results"])
     if adversarial_report:
         answer_rows.extend(adversarial_report["per_question_results"])
+
+    cost = merge_cost_phases(
+        build_cost_section(
+            meter,
+            turns=len(answer_rows),
+            scenarios=len({row.get("scenario_id") for row in answer_rows}),
+        ),
+        {
+            "retrieval": retrieval_report["cost"],
+            "answer": answer_report["cost"],
+            "adversarial": adversarial_report["cost"] if adversarial_report else None,
+            "ablation": ablation_report["cost"] if ablation_report else None,
+        },
+    )
 
     summary = {
         "Questions evaluated": len(answer_report["per_question_results"]),
@@ -119,6 +137,7 @@ def run_full_eval(
         "Abstention recall": round(float(answer_report["aggregate_metrics"]["abstention"]["abstention_recall"]), 4),
         "Prompt injection rejection rate": round(float(adversarial_metrics.get("injection_rejection_rate", 0.0)), 4),
         "Average latency": round(float(answer_report["latency"]["average_latency_ms"]), 2),
+        "Total cost USD": cost["total_usd"],
     }
 
     recommendations = list(answer_report["recommendations"])
@@ -154,7 +173,7 @@ def run_full_eval(
         "worst_cases": build_worst_cases(answer_rows),
         "recommendations": recommendations,
         "latency": answer_report["latency"],
-        "cost_estimate": answer_report["cost_estimate"],
+        "cost": cost,
     }
 
     if not write_reports:
@@ -169,6 +188,7 @@ def run_full_eval(
     markdown = "# RAG Evaluation Report\n\n## Summary\n"
     for key, value in summary.items():
         markdown += f"- {key}: {value}\n"
+    markdown += "\n" + render_cost_markdown(cost)
     markdown += "\n## Worst Cases\n"
     markdown += "| question_id | question | expected_behavior | actual_behavior | issue | retrieved_sources |\n"
     markdown += "| --- | --- | --- | --- | --- | --- |\n"
