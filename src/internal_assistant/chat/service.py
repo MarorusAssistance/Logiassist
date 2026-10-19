@@ -35,6 +35,14 @@ from internal_assistant.repositories import (
 )
 from internal_assistant.rag import DEFAULT_RETRIEVAL_CONFIG, HybridRetriever, RetrievalConfig, RetrievalFilters
 from internal_assistant.schemas import ChatPlan, ChatRequest, ChatResponse, FeedbackCreate, SourceSnippet
+from internal_assistant.security.prompt_guard import (
+    GuardResult,
+    StreamingOutputGuard,
+    build_refusal_answer,
+    check_output,
+    scan_retrieved_text,
+    scan_user_input,
+)
 
 logger = get_logger(__name__)
 
@@ -51,6 +59,8 @@ class ChatService:
         self.retrieval_logs = RetrievalLogRepository(session)
         self.memories = ConversationMemoryRepository(session)
         self.retriever = HybridRetriever(session)
+        self.last_output_findings: list[str] = []
+        self.last_output_blocked = False
 
     def classify_intent(self, message: str, state: dict | None = None) -> str:
         return detect_intent(message, state)
@@ -107,7 +117,7 @@ class ChatService:
             context_chunks=context_chunks,
             conversation_state=llm_state,
         )
-        return decision, context_chunks
+        return self._apply_output_guard(decision, context_chunks), context_chunks
 
     def stream_generate_answer(
         self,
@@ -142,19 +152,45 @@ class ChatService:
             llm_state["_datasource_status"] = datasource_status
 
         final_decision = None
+        guarded_on_token = StreamingOutputGuard(on_token)
         for event in self.llm_provider.stream_chat_response(
             question=question,
             context_chunks=context_chunks,
             conversation_state=llm_state,
         ):
             if event.kind == "token" and event.text:
-                on_token(event.text)
+                guarded_on_token(event.text)
             elif event.kind == "final":
                 final_decision = event.decision
 
         if final_decision is None:
             raise RuntimeError("El proveedor LLM no devolvio decision final en streaming")
-        return final_decision, context_chunks
+        return self._apply_output_guard(final_decision, context_chunks), context_chunks
+
+    def _apply_output_guard(self, decision: Any, context_chunks: list[dict[str, Any]]) -> Any:
+        """Valida la salida del LLM antes de mostrarla: fugas, secretos, exfiltracion y citas inventadas."""
+        allowed_chunk_ids = {int(item["chunk_id"]) for item in context_chunks}
+        decision.used_chunk_ids = [chunk_id for chunk_id in decision.used_chunk_ids if chunk_id in allowed_chunk_ids]
+        answer_check = check_output(decision.answer)
+        clarification_check = check_output(decision.clarification_question or "")
+        self.last_output_findings = answer_check.findings + clarification_check.findings
+        self.last_output_blocked = answer_check.blocked or clarification_check.blocked
+        if self.last_output_blocked:
+            logger.warning("Salida del LLM bloqueada por el guardia de seguridad: %s", self.last_output_findings)
+            blocked_answer = answer_check.answer if answer_check.blocked else clarification_check.answer
+            return decision.model_copy(
+                update={
+                    "answer": blocked_answer,
+                    "needs_clarification": False,
+                    "clarification_question": None,
+                    "should_offer_incident": False,
+                    "used_chunk_ids": [],
+                }
+            )
+        decision.answer = answer_check.answer
+        if decision.clarification_question:
+            decision.clarification_question = clarification_check.answer
+        return decision
 
     def simulate_chat(
         self,
@@ -180,17 +216,27 @@ class ChatService:
                 "mode": "simulation",
             },
         ) as trace_run:
-            response = self._handle_qa_flow(
-                conversation_id=request.conversation_id or 0,
-                state=current_state,
-                request=request,
-                intent=intent,
-                user_message_id=0,
-                started_at=time.perf_counter(),
-                write_retrieval_logs=False,
-                retrieval_config=retrieval_config,
-                trace_run=trace_run,
-            )
+            input_guard = scan_user_input(request.message)
+            if input_guard.blocked:
+                response = self._blocked_input_response(
+                    request.conversation_id or 0,
+                    current_state,
+                    input_guard,
+                    started_at=time.perf_counter(),
+                    trace_run=trace_run,
+                )
+            else:
+                response = self._handle_qa_flow(
+                    conversation_id=request.conversation_id or 0,
+                    state=current_state,
+                    request=request,
+                    intent=intent,
+                    user_message_id=0,
+                    started_at=time.perf_counter(),
+                    write_retrieval_logs=False,
+                    retrieval_config=retrieval_config,
+                    trace_run=trace_run,
+                )
             meta = response.pop("_meta", {})
             next_state = response.pop("_state")
             chat_response = ChatResponse(**response)
@@ -235,8 +281,19 @@ class ChatService:
                 {"conversation_id": conversation.id, "detected_intent": intent},
             )
             user_message = self.messages.create(conversation.id, "user", request.message, intent=intent)
+            input_guard = scan_user_input(request.message)
+            set_span_attributes(
+                request_span,
+                {"security.input_risk": input_guard.risk, "security.input_categories": input_guard.categories},
+            )
+            if input_guard.blocked:
+                logger.warning(
+                    "Mensaje bloqueado por el guardia de entrada (conversation_id=%s, categorias=%s)",
+                    conversation.id,
+                    input_guard.categories,
+                )
 
-            if intent == "feedback":
+            if intent == "feedback" and not input_guard.blocked:
                 chat_response = self._handle_feedback_message(conversation.id, user_message.id, request)
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
@@ -249,7 +306,9 @@ class ChatService:
                 )
                 return chat_response
 
-            if intent in {"register_incident", "confirm_incident"} or state.get("pending_incident_draft"):
+            if not input_guard.blocked and (
+                intent in {"register_incident", "confirm_incident"} or state.get("pending_incident_draft")
+            ):
                 with trace_run.child(
                     "rag.incident_flow",
                     run_type="chain",
@@ -289,16 +348,25 @@ class ChatService:
                 )
                 return chat_response
 
-            response = self._handle_qa_flow(
-                conversation.id,
-                state,
-                request,
-                intent,
-                user_message.id,
-                started_at,
-                trace_run=trace_run,
-                stream_token_callback=stream_token_callback,
-            )
+            if input_guard.blocked:
+                response = self._blocked_input_response(
+                    conversation.id,
+                    state,
+                    input_guard,
+                    started_at=started_at,
+                    trace_run=trace_run,
+                )
+            else:
+                response = self._handle_qa_flow(
+                    conversation.id,
+                    state,
+                    request,
+                    intent,
+                    user_message.id,
+                    started_at,
+                    trace_run=trace_run,
+                    stream_token_callback=stream_token_callback,
+                )
             meta = response.get("_meta", {})
             with start_span("chat.persist", {"conversation_id": conversation.id, "intent": intent}):
                 self.conversations.save_state(conversation, response.pop("_state"))
@@ -306,13 +374,15 @@ class ChatService:
                 self.session.commit()
             response["message_id"] = assistant_message.id
             chat_response = ChatResponse(**response)
-            self._index_turn_memory(
-                conversation_id=conversation.id,
-                user_message=user_message,
-                assistant_message=assistant_message,
-                chat_response=chat_response,
-                meta=meta,
-            )
+            if not input_guard.blocked:
+                # Los turnos bloqueados no entran en memoria para no reinyectarlos en turnos futuros.
+                self._index_turn_memory(
+                    conversation_id=conversation.id,
+                    user_message=user_message,
+                    assistant_message=assistant_message,
+                    chat_response=chat_response,
+                    meta=meta,
+                )
             trace_run.set_outputs(self._trace_response_payload(chat_response))
             set_span_attributes(
                 request_span,
@@ -584,9 +654,11 @@ class ChatService:
             enabled=plan.needs_conversation_memory,
             trace_run=trace_run,
         )
+        memory_results, quarantined_memory_ids = self._quarantine_memory(memory_results)
         memory_payload = [memory.to_dict() for memory in memory_results]
 
         retrieved = []
+        quarantined_chunk_ids: list[int] = []
         confidence = 0.0
         knowledge_query = (plan.knowledge_index_query or request.message).strip()
         if plan.needs_knowledge_index:
@@ -624,8 +696,10 @@ class ChatService:
                     retrieval_config=effective_config,
                     retrieval_filters=retrieval_filters,
                 )
+                retrieved, quarantined_chunk_ids = self._quarantine_retrieved(retrieved)
                 confidence = self.calculate_confidence(retrieved)
                 retrieve_attrs = retrieval_span_attributes(retrieved=retrieved, confidence=confidence)
+                retrieve_attrs["security.quarantined_chunk_ids"] = quarantined_chunk_ids
                 set_span_attributes(retrieve_span, retrieve_attrs)
                 retrieve_run.set_outputs(
                     {
@@ -1166,9 +1240,16 @@ class ChatService:
                 },
                 "_state": state,
             }
+        if self.last_output_blocked:
+            sources = []
+            related_incident_objects = []
         state["clarification_attempts"] = 0
         state["offer_incident"] = False
-        actual_behavior = self._actual_behavior_for_answer(evidence_assessment, decision)
+        actual_behavior = (
+            "reject_prompt_injection"
+            if self.last_output_blocked
+            else self._actual_behavior_for_answer(evidence_assessment, decision)
+        )
         should_offer_incident = False
         related_incidents = [
             {
@@ -1228,9 +1309,79 @@ class ChatService:
                 "evidence_assessment": evidence_assessment.to_dict(),
                 "actual_behavior": actual_behavior,
                 "latency_ms": latency_ms,
+                "security": {
+                    "quarantined_chunk_ids": quarantined_chunk_ids,
+                    "quarantined_memory_ids": quarantined_memory_ids,
+                    "output_findings": self.last_output_findings,
+                    "output_blocked": self.last_output_blocked,
+                },
             },
             "_state": state,
         }
+
+    def _blocked_input_response(
+        self,
+        conversation_id: int,
+        state: dict,
+        guard: GuardResult,
+        *,
+        started_at: float,
+        trace_run: Any | None,
+    ) -> dict[str, Any]:
+        answer = build_refusal_answer(guard)
+        self._trace_formatted_response(
+            trace_run,
+            answer=answer,
+            sources=[],
+            related_incidents=[],
+            conversation_id=conversation_id,
+            actual_behavior="reject_prompt_injection",
+            decision={"policy_decision": "input_guard_block", "input_guard": guard.to_dict()},
+        )
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "related_incidents": [],
+            "needs_clarification": False,
+            "clarification_attempt": int(state.get("clarification_attempts", 0)),
+            "should_offer_incident": False,
+            "adaptive_card": None,
+            "fallback_text": answer,
+            "_meta": {
+                "retrieved": [],
+                "conversation_memory": [],
+                "confidence": 0.0,
+                "decision": None,
+                "context_chunks": [],
+                "actual_behavior": "reject_prompt_injection",
+                "latency_ms": int((time.perf_counter() - started_at) * 1000),
+                "security": {"input_guard": guard.to_dict()},
+            },
+            "_state": state,
+        }
+
+    def _quarantine_retrieved(self, retrieved: list) -> tuple[list, list[int]]:
+        """Inyeccion indirecta: un chunk con instrucciones para el modelo no llega al prompt ni a las fuentes."""
+        kept, quarantined = [], []
+        for item in retrieved:
+            if scan_retrieved_text(item.content).blocked:
+                quarantined.append(item.chunk_id)
+            else:
+                kept.append(item)
+        if quarantined:
+            logger.warning("Chunks en cuarentena por posible prompt injection: %s", quarantined)
+        return kept, quarantined
+
+    def _quarantine_memory(self, memories: list) -> tuple[list, list[Any]]:
+        kept, quarantined = [], []
+        for memory in memories:
+            payload = memory.to_dict()
+            if scan_retrieved_text(str(payload.get("memory_text", ""))).blocked:
+                quarantined.append(payload.get("memory_id"))
+            else:
+                kept.append(memory)
+        return kept, quarantined
 
     def _format_answer_for_demo(self, answer: str, *, related_incidents: list[dict] | None = None) -> str:
         return self._strip_demo_headings(answer)

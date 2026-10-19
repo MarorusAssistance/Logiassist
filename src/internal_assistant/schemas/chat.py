@@ -144,12 +144,23 @@ class ChatPlan(BaseModel):
         return self
 
 
+MAX_CHAT_MESSAGE_CHARS = 2000
+
+
 class ChatRequest(BaseModel):
     conversation_id: int | None = None
-    user_id: str
-    message: str
-    channel: str = "local"
-    teams_conversation_id: str | None = None
+    user_id: str = Field(min_length=1, max_length=128)
+    message: str = Field(min_length=1, max_length=MAX_CHAT_MESSAGE_CHARS)
+    channel: str = Field(default="local", max_length=64)
+    teams_conversation_id: str | None = Field(default=None, max_length=256)
+
+    @field_validator("message", mode="before")
+    @classmethod
+    def normalize_message(cls, value):
+        # Quita caracteres invisibles/bidi usados para esconder instrucciones (ASCII smuggling).
+        from internal_assistant.security.prompt_guard import normalize_untrusted_text
+
+        return normalize_untrusted_text(value).strip() if isinstance(value, str) else value
 
 
 class ChatResponse(BaseModel):

@@ -2,8 +2,14 @@ from __future__ import annotations
 
 import json
 
-from internal_assistant.llm.prompts import PLANNER_PROMPT, SYSTEM_PROMPT
+from internal_assistant.llm.prompts import PLANNER_PROMPT, SECURITY_RULES, SYSTEM_PROMPT
 from internal_assistant.schemas.chat import AssistantDecision, ChatPlan
+from internal_assistant.security.prompt_guard import CANARY_TOKEN, DATA_TAG, new_nonce, wrap_untrusted
+
+
+def render_system_prompt(template: str) -> str:
+    rules = SECURITY_RULES.replace("{data_tag}", DATA_TAG).replace("{canary}", CANARY_TOKEN)
+    return template.replace("{security_rules}", rules)
 
 
 def build_chat_messages(
@@ -12,23 +18,35 @@ def build_chat_messages(
     context_chunks: list[dict],
     conversation_state: dict,
 ) -> list[dict[str, str]]:
+    nonce = new_nonce()
     context = "\n\n".join(
-        f"[chunk_id={item['chunk_id']}] {item['content']}" for item in context_chunks
+        wrap_untrusted(
+            str(item.get("content", "")),
+            nonce=nonce,
+            kind="fragmento_indice",
+            chunk_id=item["chunk_id"],
+            source=f"{item.get('source_type', '')}:{item.get('source_id', '')}",
+        )
+        for item in context_chunks
     )
     evidence_policy = conversation_state.get("_evidence_policy") or {}
     conversation_memory = conversation_state.get("_conversation_memory") or []
     datasource_status = conversation_state.get("_datasource_status") or {}
     planner_output = conversation_state.get("_planner_output") or {}
     memory_context = "\n\n".join(
-        (
-            f"[memory_id={item.get('memory_id')}, message_id={item.get('message_id')}, "
-            f"role={item.get('role')}, score={item.get('score', 0):.4f}] "
-            f"{item.get('memory_text', '')}"
+        wrap_untrusted(
+            str(item.get("memory_text", "")),
+            nonce=nonce,
+            kind="memoria_conversacional",
+            memory_id=item.get("memory_id"),
+            message_id=item.get("message_id"),
+            role=item.get("role"),
+            score=f"{item.get('score', 0):.4f}",
         )
         for item in conversation_memory
     )
     return [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": render_system_prompt(SYSTEM_PROMPT)},
         {
             "role": "user",
             "content": (
@@ -49,7 +67,7 @@ def build_chat_messages(
                 "Si ademas hay documentos directos en el indice de conocimiento, responde con una version mas concreta; "
                 "no pidas aclaracion solo porque el mensaje actual no repita todos los detalles.\n"
                 f"Memoria conversacional recuperada:\n{memory_context or '[sin memoria consultada o sin resultados]'}\n"
-                f"Pregunta: {question}\n"
+                f"Pregunta del usuario:\n{wrap_untrusted(question, nonce=nonce, kind='pregunta_usuario')}\n"
                 f"Contexto del indice de conocimiento:\n{context or '[indice no consultado o sin resultados]'}"
             ),
         },
@@ -57,14 +75,19 @@ def build_chat_messages(
 
 
 def build_planner_messages(*, message: str, recent_messages: list[dict], conversation_state: dict) -> list[dict[str, str]]:
+    nonce = new_nonce()
     return [
-        {"role": "system", "content": PLANNER_PROMPT},
+        {"role": "system", "content": render_system_prompt(PLANNER_PROMPT)},
         {
             "role": "user",
             "content": (
-                f"Mensaje actual: {message}\n"
+                f"Mensaje actual:\n{wrap_untrusted(message, nonce=nonce, kind='pregunta_usuario')}\n"
                 f"Estado conversacional: {json.dumps(conversation_state, ensure_ascii=False)}\n"
-                f"Mensajes recientes: {json.dumps(recent_messages, ensure_ascii=False)}"
+                "Mensajes recientes:\n"
+                + "\n".join(
+                    wrap_untrusted(str(item.get("content", "")), nonce=nonce, kind="mensaje_previo", role=item.get("role"))
+                    for item in recent_messages
+                )
             ),
         },
     ]
