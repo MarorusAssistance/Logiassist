@@ -34,3 +34,30 @@ def test_provider_requires_key(monkeypatch):
     monkeypatch.setattr(module, "get_settings", lambda: _settings(azure_ai_api_key=""))
     with pytest.raises(ValueError):
         AzureOpenAIProvider()
+
+
+def _content_filter_error():
+    import httpx
+    from openai import BadRequestError
+
+    request = httpx.Request("POST", "https://x/openai/v1/chat/completions")
+    body = {"error": {"code": "content_filter", "message": "Response content blocked by label 'Jailbreak'."}}
+    return BadRequestError("blocked", response=httpx.Response(400, request=request, json=body), body=body)
+
+
+def test_content_filter_becomes_controlled_refusal(monkeypatch):
+    def create(**kwargs):
+        raise _content_filter_error()
+
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(module, "get_settings", lambda: _settings(chat_model="DeepSeek-V4-Flash"))
+    monkeypatch.setattr(module, "OpenAI", lambda **kwargs: client)
+    provider = AzureOpenAIProvider()
+
+    decision = provider.generate_chat_response(question="x", context_chunks=[], conversation_state={})
+    events = list(provider.stream_chat_response(question="x", context_chunks=[], conversation_state={}))
+    plan = provider.plan_chat(message="hola", recent_messages=[], conversation_state={})
+
+    assert decision.answer.startswith("No puedo")
+    assert events[-1].kind == "final" and events[-1].decision.answer.startswith("No puedo")
+    assert plan.knowledge_index_query or plan.needs_knowledge_index

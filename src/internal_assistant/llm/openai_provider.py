@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 from internal_assistant.config import get_settings
 from internal_assistant.llm.base import LLMProvider
 from internal_assistant.llm.common import (
+    CONTENT_FILTER_ANSWER,
+    is_content_filter_error,
     build_chat_messages,
     build_planner_messages,
     parse_assistant_decision,
@@ -61,7 +63,7 @@ class OpenAIProvider(LLMProvider):
             set_span_attributes(span, {"llm.embedding_output_count": len(validated)})
             return validated
 
-    def generate_chat_response(self, *, question: str, context_chunks: list[dict], conversation_state: dict) -> AssistantDecision:
+    def _generate_chat_response(self, *, question: str, context_chunks: list[dict], conversation_state: dict) -> AssistantDecision:
         with start_span(
             "llm.chat_completion",
             {
@@ -100,7 +102,7 @@ class OpenAIProvider(LLMProvider):
             )
             return decision
 
-    def stream_chat_response(
+    def _stream_chat_response(
         self,
         *,
         question: str,
@@ -159,7 +161,7 @@ class OpenAIProvider(LLMProvider):
             )
             yield ChatStreamEvent(kind="final", decision=decision)
 
-    def plan_chat(self, *, message: str, recent_messages: list[dict], conversation_state: dict) -> ChatPlan:
+    def _plan_chat(self, *, message: str, recent_messages: list[dict], conversation_state: dict) -> ChatPlan:
         with start_span(
             "llm.chat_planner",
             {
@@ -198,6 +200,42 @@ class OpenAIProvider(LLMProvider):
                 },
             )
             return plan
+
+    # Azure (Prompt Shields / filtros de contenido) puede bloquear peticiones o respuestas con un 400.
+    # Es otra capa de defensa: se responde con un rechazo controlado en lugar de un error 500.
+    def generate_chat_response(self, *, question: str, context_chunks: list[dict], conversation_state: dict) -> AssistantDecision:
+        try:
+            return self._generate_chat_response(
+                question=question, context_chunks=context_chunks, conversation_state=conversation_state
+            )
+        except BadRequestError as exc:
+            if not is_content_filter_error(exc):
+                raise
+            return AssistantDecision(answer=CONTENT_FILTER_ANSWER)
+
+    def stream_chat_response(
+        self,
+        *,
+        question: str,
+        context_chunks: list[dict],
+        conversation_state: dict,
+    ) -> Iterator[ChatStreamEvent]:
+        try:
+            yield from self._stream_chat_response(
+                question=question, context_chunks=context_chunks, conversation_state=conversation_state
+            )
+        except BadRequestError as exc:
+            if not is_content_filter_error(exc):
+                raise
+            yield ChatStreamEvent(kind="final", decision=AssistantDecision(answer=CONTENT_FILTER_ANSWER))
+
+    def plan_chat(self, *, message: str, recent_messages: list[dict], conversation_state: dict) -> ChatPlan:
+        try:
+            return self._plan_chat(message=message, recent_messages=recent_messages, conversation_state=conversation_state)
+        except BadRequestError as exc:
+            if not is_content_filter_error(exc):
+                raise
+            return ChatPlan.fallback(message)
 
 
 class SplitLLMProvider(LLMProvider):

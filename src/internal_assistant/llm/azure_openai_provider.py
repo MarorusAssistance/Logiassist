@@ -34,6 +34,7 @@ class AzureOpenAIProvider(OpenAIProvider):
         self.client = OpenAI(
             api_key=settings.azure_ai_api_key,
             base_url=foundry_openai_base_url(settings),
-            max_retries=2,
+            # Las cuotas por deployment de Foundry son pequenas (TPM): reintentos con backoff ante 429.
+            max_retries=8,
             timeout=settings.llm_timeout_seconds,
         )

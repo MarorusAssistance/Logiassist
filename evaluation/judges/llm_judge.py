@@ -7,6 +7,7 @@ from openai import BadRequestError
 
 from internal_assistant.llm import build_default_provider
 from internal_assistant.llm.anthropic_foundry_provider import AnthropicFoundryProvider, judge_payload
+from internal_assistant.llm.common import is_content_filter_error
 from internal_assistant.observability.usage import record_chat_usage
 from internal_assistant.schemas import ChatResponse
 
@@ -62,18 +63,27 @@ class LLMJudge(BaseJudge):
             )
             return base
         try:
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                temperature=0.0,
-                response_format={"type": "json_object"},
-                messages=messages,
-            )
-        except BadRequestError:
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                temperature=0.0,
-                messages=messages,
-            )
+            try:
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    temperature=0.0,
+                    response_format={"type": "json_object"},
+                    messages=messages,
+                )
+            except BadRequestError as exc:
+                if is_content_filter_error(exc):
+                    raise
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    temperature=0.0,
+                    messages=messages,
+                )
+        except BadRequestError as exc:
+            if not is_content_filter_error(exc):
+                raise
+            # El filtro de Azure bloquea al juez cuando la pregunta es un ataque: se queda el veredicto heuristico.
+            base.update({"llm_score": None, "llm_verdict": "filtered", "llm_reason": "Bloqueado por el filtro de contenido del proveedor"})
+            return base
         record_chat_usage(
             getattr(completion, "usage", None),
             provider=self.provider_name,

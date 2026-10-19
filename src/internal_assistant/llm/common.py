@@ -140,3 +140,16 @@ def validate_embedding_dimensions(embeddings: list[list[float]], expected_dimens
                 f"se esperaba {expected_dimensions} y se obtuvo {len(embedding)}"
             )
     return embeddings
+
+
+CONTENT_FILTER_ANSWER = (
+    "No puedo procesar esta peticion: el filtro de seguridad del proveedor la ha bloqueado. "
+    "Si tienes una duda operativa concreta, indica el sistema y el proceso."
+)
+
+
+def is_content_filter_error(exc: Exception) -> bool:
+    """True si Azure (Prompt Shields / filtros de contenido) ha bloqueado la peticion o la respuesta."""
+    body = getattr(exc, "body", None)
+    text = str(body if body is not None else exc).lower()
+    return getattr(exc, "status_code", None) == 400 and "content_filter" in text
