@@ -51,6 +51,18 @@
     },
     "enableApplicationInsights": {
       "value": true
+    },
+    "useKeyVault": {
+      "value": true
+    },
+    "keyVaultName": {
+      "value": ""
+    },
+    "keyVaultAdminPrincipalId": {
+      "value": "<object-id-de-quien-despliega>"
+    },
+    "keyVaultAdminPrincipalType": {
+      "value": "User"
     }
   }
 }

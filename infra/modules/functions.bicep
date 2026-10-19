@@ -47,6 +47,9 @@ resource indexerFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: indexerFunctionName
   location: location
   kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
@@ -64,6 +67,9 @@ resource incidentsFunction 'Microsoft.Web/sites@2023-12-01' = {
   name: incidentsFunctionName
   location: location
   kind: 'functionapp,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
@@ -81,3 +87,5 @@ output indexerFunctionName string = indexerFunction.name
 output indexerDefaultHostName string = indexerFunction.properties.defaultHostName
 output incidentsFunctionName string = incidentsFunction.name
 output incidentsDefaultHostName string = incidentsFunction.properties.defaultHostName
+output indexerPrincipalId string = indexerFunction.identity.principalId
+output incidentsPrincipalId string = incidentsFunction.identity.principalId

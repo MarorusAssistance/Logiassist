@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "11652022426201418418"
+      "version": "0.43.8.12551",
+      "templateHash": "4003538176656806027"
     }
   },
   "parameters": {
@@ -32,7 +32,11 @@
       "type": "string"
     },
     "openAiApiKey": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto openai-api-key."
+      }
     },
     "chatModel": {
       "type": "string"
@@ -44,16 +48,28 @@
       "type": "int"
     },
     "adminApiKey": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto admin-api-key."
+      }
     },
     "appSharedSecret": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto app-shared-secret."
+      }
     },
     "microsoftAppId": {
       "type": "string"
     },
     "microsoftAppPassword": {
-      "type": "securestring"
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Solo se usa con useKeyVault=false. Con Key Vault el valor vive en el secreto microsoft-app-password."
+      }
     },
     "allowedOrigins": {
       "type": "array",
@@ -62,6 +78,36 @@
     "enableApplicationInsights": {
       "type": "bool",
       "defaultValue": true
+    },
+    "useKeyVault": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "true: crea Key Vault (RBAC), identidades administradas y App Settings como referencias @Microsoft.KeyVault(...)."
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Nombre opcional del Key Vault. Vacio = kv-<hash> determinista por RG/proyecto/entorno."
+      }
+    },
+    "keyVaultAdminPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Object ID de quien sincroniza secretos (az ad signed-in-user show --query id -o tsv). Recibe Key Vault Secrets Officer."
+      }
+    },
+    "keyVaultAdminPrincipalType": {
+      "type": "string",
+      "defaultValue": "User",
+      "allowedValues": [
+        "User",
+        "ServicePrincipal",
+        "Group"
+      ]
     }
   },
   "variables": {
@@ -77,6 +123,15 @@
     "postgresServerName": "[take(format('{0}-pg', variables('baseName')), 63)]",
     "postgresHost": "[format('{0}.postgres.database.azure.com', variables('postgresServerName'))]",
     "databaseUrl": "[format('postgresql+psycopg://{0}:{1}@{2}:5432/{3}?sslmode=require', parameters('postgresAdminUser'), uriComponent(parameters('postgresAdminPassword')), variables('postgresHost'), parameters('postgresDatabaseName'))]",
+    "resolvedKeyVaultName": "[if(empty(parameters('keyVaultName')), take(format('kv-{0}', uniqueString(resourceGroup().id, parameters('projectName'), parameters('environmentName'))), 24), parameters('keyVaultName'))]",
+    "kvRefPrefix": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=', variables('resolvedKeyVaultName'))]",
+    "secretSettingValues": {
+      "databaseUrl": "[if(parameters('useKeyVault'), format('{0}database-url)', variables('kvRefPrefix')), variables('databaseUrl'))]",
+      "openAiApiKey": "[if(parameters('useKeyVault'), format('{0}openai-api-key)', variables('kvRefPrefix')), parameters('openAiApiKey'))]",
+      "adminApiKey": "[if(parameters('useKeyVault'), format('{0}admin-api-key)', variables('kvRefPrefix')), parameters('adminApiKey'))]",
+      "appSharedSecret": "[if(parameters('useKeyVault'), format('{0}app-shared-secret)', variables('kvRefPrefix')), parameters('appSharedSecret'))]",
+      "microsoftAppPassword": "[if(parameters('useKeyVault'), format('{0}microsoft-app-password)', variables('kvRefPrefix')), parameters('microsoftAppPassword'))]"
+    },
     "webAppHostname": "[format('{0}.azurewebsites.net', variables('webAppName'))]",
     "indexerFunctionHostname": "[format('{0}.azurewebsites.net', variables('indexerFunctionName'))]",
     "incidentsFunctionHostname": "[format('{0}.azurewebsites.net', variables('incidentsFunctionName'))]",
@@ -106,8 +161,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "13729200775375326495"
+              "version": "0.43.8.12551",
+              "templateHash": "4517921979850494030"
             }
           },
           "parameters": {
@@ -179,8 +234,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "1125305229176703646"
+              "version": "0.43.8.12551",
+              "templateHash": "14225348859442130439"
             }
           },
           "parameters": {
@@ -270,8 +325,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "1542863045161856176"
+              "version": "0.43.8.12551",
+              "templateHash": "10776399534279177231"
             }
           },
           "parameters": {
@@ -405,7 +460,7 @@
             "value": "[join(parameters('allowedOrigins'), ',')]"
           },
           "appSettings": {
-            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('databaseUrl')), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', parameters('openAiApiKey')), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', parameters('adminApiKey')), createObject('name', 'APP_SHARED_SECRET', 'value', parameters('appSharedSecret')), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'ALLOWED_ORIGINS', 'value', join(parameters('allowedOrigins'), ',')), createObject('name', 'BOT_ENDPOINT', 'value', variables('botEndpoint')), createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'MICROSOFT_APP_ID', 'value', parameters('microsoftAppId')), createObject('name', 'MICROSOFT_APP_PASSWORD', 'value', parameters('microsoftAppPassword')), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true')))]"
+            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('secretSettingValues').databaseUrl), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', variables('secretSettingValues').openAiApiKey), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', variables('secretSettingValues').adminApiKey), createObject('name', 'APP_SHARED_SECRET', 'value', variables('secretSettingValues').appSharedSecret), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'ALLOWED_ORIGINS', 'value', join(parameters('allowedOrigins'), ',')), createObject('name', 'BOT_ENDPOINT', 'value', variables('botEndpoint')), createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'MICROSOFT_APP_ID', 'value', parameters('microsoftAppId')), createObject('name', 'MICROSOFT_APP_PASSWORD', 'value', variables('secretSettingValues').microsoftAppPassword), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true')))]"
           }
         },
         "template": {
@@ -414,8 +469,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "9696464829173261001"
+              "version": "0.43.8.12551",
+              "templateHash": "2825477903350157866"
             }
           },
           "parameters": {
@@ -457,8 +512,8 @@
               "location": "[parameters('location')]",
               "kind": "linux",
               "sku": {
-                "name": "F1",
-                "tier": "Free",
+                "name": "B1",
+                "tier": "Basic",
                 "capacity": 1
               },
               "properties": {
@@ -471,6 +526,9 @@
               "name": "[parameters('webAppName')]",
               "location": "[parameters('location')]",
               "kind": "app,linux",
+              "identity": {
+                "type": "SystemAssigned"
+              },
               "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
                 "httpsOnly": true,
@@ -499,6 +557,10 @@
             "defaultHostName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01', 'full').identity.principalId]"
             }
           }
         }
@@ -534,7 +596,7 @@
             "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('baseName'))), '2025-04-01').outputs.connectionString.value]"
           },
           "appSettings": {
-            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('databaseUrl')), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', parameters('openAiApiKey')), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', parameters('adminApiKey')), createObject('name', 'APP_SHARED_SECRET', 'value', parameters('appSharedSecret')), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true'), createObject('name', 'ENABLE_ORYX_BUILD', 'value', 'true'), createObject('name', 'AzureWebJobsFeatureFlags', 'value', 'EnableWorkerIndexing')))]"
+            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('secretSettingValues').databaseUrl), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', variables('secretSettingValues').openAiApiKey), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', variables('secretSettingValues').adminApiKey), createObject('name', 'APP_SHARED_SECRET', 'value', variables('secretSettingValues').appSharedSecret), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true'), createObject('name', 'ENABLE_ORYX_BUILD', 'value', 'true'), createObject('name', 'AzureWebJobsFeatureFlags', 'value', 'EnableWorkerIndexing')))]"
           }
         },
         "template": {
@@ -543,8 +605,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "6227910752966048938"
+              "version": "0.43.8.12551",
+              "templateHash": "10149889698051802100"
             }
           },
           "parameters": {
@@ -618,6 +680,9 @@
               "name": "[parameters('indexerFunctionName')]",
               "location": "[parameters('location')]",
               "kind": "functionapp,linux",
+              "identity": {
+                "type": "SystemAssigned"
+              },
               "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
                 "httpsOnly": true,
@@ -639,6 +704,9 @@
               "name": "[parameters('incidentsFunctionName')]",
               "location": "[parameters('location')]",
               "kind": "functionapp,linux",
+              "identity": {
+                "type": "SystemAssigned"
+              },
               "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
                 "httpsOnly": true,
@@ -671,6 +739,14 @@
             "incidentsDefaultHostName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Web/sites', parameters('incidentsFunctionName')), '2023-12-01').defaultHostName]"
+            },
+            "indexerPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('indexerFunctionName')), '2023-12-01', 'full').identity.principalId]"
+            },
+            "incidentsPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('incidentsFunctionName')), '2023-12-01', 'full').identity.principalId]"
             }
           }
         }
@@ -678,6 +754,171 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName')))]",
         "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('baseName')))]"
+      ]
+    },
+    {
+      "condition": "[parameters('useKeyVault')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('{0}-keyvault', variables('baseName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "keyVaultName": {
+            "value": "[variables('resolvedKeyVaultName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "secretReaderPrincipalIds": {
+            "value": [
+              "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-app-service', variables('baseName'))), '2025-04-01').outputs.principalId.value]",
+              "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('functionsResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-functions', variables('baseName'))), '2025-04-01').outputs.indexerPrincipalId.value]",
+              "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('functionsResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-functions', variables('baseName'))), '2025-04-01').outputs.incidentsPrincipalId.value]"
+            ]
+          },
+          "writerPrincipalId": {
+            "value": "[parameters('keyVaultAdminPrincipalId')]"
+          },
+          "writerPrincipalType": {
+            "value": "[parameters('keyVaultAdminPrincipalType')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "9332319308776872878"
+            }
+          },
+          "parameters": {
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Nombre del Key Vault (3-24 caracteres, alfanumerico y guiones, unico global)."
+              }
+            },
+            "location": {
+              "type": "string"
+            },
+            "secretReaderPrincipalIds": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Principal IDs de identidades administradas (Web App y Function Apps) que solo leen secretos."
+              }
+            },
+            "writerPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Object ID del usuario/SP que despliega y sincroniza secretos. Vacio = no se asigna rol."
+              }
+            },
+            "writerPrincipalType": {
+              "type": "string",
+              "defaultValue": "User",
+              "allowedValues": [
+                "User",
+                "ServicePrincipal",
+                "Group"
+              ]
+            },
+            "softDeleteRetentionInDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "minValue": 7,
+              "maxValue": 90
+            }
+          },
+          "variables": {
+            "keyVaultSecretsUserRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+            "keyVaultSecretsOfficerRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[parameters('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": "[parameters('softDeleteRetentionInDays')]",
+                "enabledForDeployment": false,
+                "enabledForTemplateDeployment": false,
+                "enabledForDiskEncryption": false,
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow"
+                }
+              }
+            },
+            {
+              "copy": {
+                "name": "secretReaders",
+                "count": "[length(parameters('secretReaderPrincipalIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('secretReaderPrincipalIds')[copyIndex()], variables('keyVaultSecretsUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('keyVaultSecretsUserRoleId')]",
+                "principalId": "[parameters('secretReaderPrincipalIds')[copyIndex()]]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('writerPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('writerPrincipalId'), variables('keyVaultSecretsOfficerRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('keyVaultSecretsOfficerRoleId')]",
+                "principalId": "[parameters('writerPrincipalId')]",
+                "principalType": "[parameters('writerPrincipalType')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultName": {
+              "type": "string",
+              "value": "[parameters('keyVaultName')]"
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), '2023-07-01').vaultUri]"
+            },
+            "keyVaultId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-app-service', variables('baseName')))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('functionsResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-functions', variables('baseName')))]"
       ]
     },
     {
@@ -706,8 +947,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "13595526592871245133"
+              "version": "0.43.8.12551",
+              "templateHash": "2260224722488473313"
             }
           },
           "parameters": {
@@ -804,6 +1045,22 @@
     "applicationInsightsConnectionString": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[if(parameters('useKeyVault'), variables('resolvedKeyVaultName'), '')]"
+    },
+    "webAppPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-app-service', variables('baseName'))), '2025-04-01').outputs.principalId.value]"
+    },
+    "indexerFunctionPrincipalId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('functionsResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-functions', variables('baseName'))), '2025-04-01').outputs.indexerPrincipalId.value]"
+    },
+    "incidentsFunctionPrincipalId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('functionsResourceGroupName')), 'Microsoft.Resources/deployments', format('{0}-functions', variables('baseName'))), '2025-04-01').outputs.incidentsPrincipalId.value]"
     }
   }
 }

@@ -5,12 +5,52 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/_azure_common.sh"
 
+# USE_KEY_VAULT=true (por defecto): los secretos se configuran como referencias
+#   @Microsoft.KeyVault(VaultName=<kv>;SecretName=<nombre>) que la identidad
+#   administrada de cada app resuelve en runtime. Requiere haber ejecutado antes
+#   ./scripts/sync_keyvault_secrets.sh. Ningun valor secreto pasa por argv.
+# USE_KEY_VAULT=false: comportamiento anterior (valores en claro en App Settings).
+
 load_azure_env
 azure_login_check
-require_vars PROJECT_NAME ENVIRONMENT_NAME AZURE_RESOURCE_GROUP POSTGRES_ADMIN_USER POSTGRES_ADMIN_PASSWORD POSTGRES_DATABASE_NAME OPENAI_API_KEY CHAT_MODEL EMBEDDING_MODEL EMBEDDING_DIMENSIONS ADMIN_API_KEY APP_SHARED_SECRET MICROSOFT_APP_ID MICROSOFT_APP_PASSWORD
+require_vars PROJECT_NAME ENVIRONMENT_NAME AZURE_RESOURCE_GROUP CHAT_MODEL EMBEDDING_MODEL EMBEDDING_DIMENSIONS MICROSOFT_APP_ID
 load_bicep_outputs
 
-DATABASE_URL="$(build_database_url)"
+if use_key_vault; then
+  require_vars KEY_VAULT_NAME
+  EXISTING_KV_SECRETS="$(kv_existing_secret_names)" || fail "No se pudieron listar los secretos de '${KEY_VAULT_NAME}'. Revisa tu rol Key Vault Secrets Officer."
+  missing_required=()
+  for env_name in "${KV_REQUIRED_SECRET_VARS[@]}"; do
+    if ! grep -qx "$(kv_secret_name "${env_name}")" <<<"${EXISTING_KV_SECRETS}"; then
+      missing_required+=("${env_name}")
+    fi
+  done
+  if (( ${#missing_required[@]} > 0 )); then
+    fail "Faltan secretos en Key Vault para: ${missing_required[*]}. Ejecuta ./scripts/sync_keyvault_secrets.sh"
+  fi
+  # Opcionales: referencia solo si el secreto existe; si no, valor vacio (una
+  # referencia rota haria que la app recibiera el literal @Microsoft.KeyVault(...)).
+  secret_setting() {
+    local env_name="$1"
+    if grep -qx "$(kv_secret_name "${env_name}")" <<<"${EXISTING_KV_SECRETS}"; then
+      kv_reference "${env_name}"
+    else
+      printf '\n'
+    fi
+  }
+  DATABASE_URL="$(secret_setting DATABASE_URL)"
+  OPENAI_API_KEY="$(secret_setting OPENAI_API_KEY)"
+  ADMIN_API_KEY="$(secret_setting ADMIN_API_KEY)"
+  APP_SHARED_SECRET="$(secret_setting APP_SHARED_SECRET)"
+  MICROSOFT_APP_PASSWORD="$(secret_setting MICROSOFT_APP_PASSWORD)"
+  RERANKER_API_KEY="$(secret_setting RERANKER_API_KEY)"
+  LANGSMITH_API_KEY="$(secret_setting LANGSMITH_API_KEY)"
+  echo "Usando referencias Key Vault (${KEY_VAULT_NAME}) para: ${KV_REQUIRED_SECRET_VARS[*]} ${KV_OPTIONAL_SECRET_VARS[*]}"
+else
+  echo "AVISO: USE_KEY_VAULT=false; los secretos se guardan en claro en App Settings." >&2
+  require_vars POSTGRES_ADMIN_USER POSTGRES_ADMIN_PASSWORD POSTGRES_DATABASE_NAME OPENAI_API_KEY ADMIN_API_KEY APP_SHARED_SECRET MICROSOFT_APP_PASSWORD
+  DATABASE_URL="$(build_database_url)"
+fi
 MICROSOFT_APP_TENANT_ID="${MICROSOFT_APP_TENANT_ID:-$(az account show --query tenantId -o tsv | tr -d '\r\n')}"
 BOT_ENDPOINT="${BOT_ENDPOINT:-https://${AZURE_WEBAPP_HOSTNAME}/api/messages}"
 CUSTOM_INCIDENTS_API_BASE_URL="${CUSTOM_INCIDENTS_API_BASE_URL:-https://${AZURE_INCIDENTS_FUNCTION_HOSTNAME}/api}"

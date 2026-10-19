@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 AZURE_ENV_FILE="${AZURE_ENV_FILE:-${ROOT_DIR}/.env.azure}"
+DEPLOYMENT_NAME_OVERRIDE="${DEPLOYMENT_NAME:-}"
 DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-${PROJECT_NAME:-internal-assistant}-${ENVIRONMENT_NAME:-demo}-infra}"
 declare -a PYTHON_CMD=()
 
@@ -83,11 +84,16 @@ resolve_python_cmd() {
 }
 
 load_azure_env() {
+  local deployment_name_before="${DEPLOYMENT_NAME}"
   if [[ -f "${AZURE_ENV_FILE}" ]]; then
     set -a
     # shellcheck disable=SC1090
     source "${AZURE_ENV_FILE}"
     set +a
+  fi
+  # Se recalcula tras cargar .env.azure para respetar PROJECT_NAME/ENVIRONMENT_NAME personalizados.
+  if [[ -z "${DEPLOYMENT_NAME_OVERRIDE:-}" && "${DEPLOYMENT_NAME}" == "${deployment_name_before}" ]]; then
+    DEPLOYMENT_NAME="${PROJECT_NAME:-internal-assistant}-${ENVIRONMENT_NAME:-demo}-infra"
   fi
 }
 
@@ -161,33 +167,115 @@ load_bicep_outputs() {
   export AZURE_STORAGE_ACCOUNT_NAME="$(deployment_output storageAccountName)"
   export AZURE_BOT_RESOURCE_NAME="$(deployment_output botName)"
   export APPLICATIONINSIGHTS_CONNECTION_STRING="${APPLICATIONINSIGHTS_CONNECTION_STRING:-$(deployment_output applicationInsightsConnectionString)}"
+  if use_key_vault; then
+    export KEY_VAULT_NAME="${KEY_VAULT_NAME:-$(deployment_output keyVaultName)}"
+  fi
+}
+
+# --- Key Vault -------------------------------------------------------------
+# Variables de .env.azure que se guardan en Key Vault. El nombre del secreto se
+# deriva con kv_secret_name (OPENAI_API_KEY -> openai-api-key).
+# KV_REQUIRED_SECRET_VARS: la app no arranca bien sin ellos.
+# KV_OPTIONAL_SECRET_VARS: solo se referencian si existen en el vault.
+# KV_STORED_ONLY_SECRET_VARS: se guardan en el vault pero no se exponen como App Setting.
+KV_REQUIRED_SECRET_VARS=(DATABASE_URL OPENAI_API_KEY ADMIN_API_KEY APP_SHARED_SECRET MICROSOFT_APP_PASSWORD)
+KV_OPTIONAL_SECRET_VARS=(RERANKER_API_KEY LANGSMITH_API_KEY)
+KV_STORED_ONLY_SECRET_VARS=(POSTGRES_ADMIN_PASSWORD)
+
+use_key_vault() {
+  local flag="${USE_KEY_VAULT:-true}"
+  flag="$(printf '%s' "${flag}" | tr '[:upper:]' '[:lower:]')"
+  [[ "${flag}" == "true" || "${flag}" == "1" || "${flag}" == "yes" ]]
+}
+
+kv_secret_name() {
+  local env_name="$1"
+  local kv_name
+  kv_name="$(printf '%s' "${env_name}" | tr '[:upper:]' '[:lower:]' | tr '_' '-')"
+  [[ "${kv_name}" =~ ^[a-z0-9-]{1,127}$ ]] || fail "Nombre de secreto no valido para Key Vault: ${env_name}"
+  printf '%s\n' "${kv_name}"
+}
+
+kv_reference() {
+  local env_name="$1"
+  require_vars KEY_VAULT_NAME
+  printf '@Microsoft.KeyVault(VaultName=%s;SecretName=%s)\n' "${KEY_VAULT_NAME}" "$(kv_secret_name "${env_name}")"
+}
+
+# Lista (solo nombres) de los secretos existentes en el vault, uno por linea.
+kv_existing_secret_names() {
+  require_vars KEY_VAULT_NAME
+  az keyvault secret list \
+    --vault-name "${KEY_VAULT_NAME}" \
+    --query "[].name" \
+    -o tsv | tr -d '\r'
+}
+
+# Valores que no deben subirse nunca (vacios o plantillas del .example).
+is_placeholder_secret() {
+  local value="${1:-}"
+  local lowered
+  [[ -z "${value//[[:space:]]/}" ]] && return 0
+  lowered="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
+  case "${lowered}" in
+    "<"*">"|change-this*|changeme*|change-me*|replace-me*|your-*|xxx*|todo|placeholder|set-me|"<set-me>")
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+# Directorio temporal privado (0700) dentro del repo para que tambien funcione
+# con az.exe desde WSL/Git Bash. .artifacts/ esta en .gitignore.
+make_private_tmpdir() {
+  local base="${ROOT_DIR}/.artifacts"
+  local dir
+  ( umask 077 && mkdir -p "${base}" )
+  dir="$(umask 077 && mktemp -d "${base}/.secrets.XXXXXX")"
+  chmod 700 "${dir}"
+  printf '%s\n' "${dir}"
 }
 
 webapp_appsetting() {
   local setting_name="$1"
-  az webapp config appsettings list \
+  local raw
+  raw="$(az webapp config appsettings list \
     --resource-group "${AZURE_RESOURCE_GROUP}" \
     --name "${AZURE_WEBAPP_NAME}" \
     --query "[?name=='${setting_name}'].value | [0]" \
-    -o tsv | tr -d '\r\n'
+    -o tsv | tr -d '\r\n')"
+  # Si el setting es una referencia Key Vault, resuelve el valor desde el vault
+  # (requiere rol Key Vault Secrets User/Officer). El valor solo se devuelve al
+  # llamador via stdout capturado; nunca se imprime aqui.
+  local kv_ref_regex='^@Microsoft\.KeyVault\(VaultName=([^;]+);SecretName=([^;)]+)'
+  if [[ "${raw}" =~ ${kv_ref_regex} ]]; then
+    az keyvault secret show \
+      --vault-name "${BASH_REMATCH[1]}" \
+      --name "${BASH_REMATCH[2]}" \
+      --query value \
+      -o tsv | tr -d '\r\n'
+    return
+  fi
+  printf '%s' "${raw}"
 }
 
 build_database_url() {
   require_vars AZURE_POSTGRES_SERVER_NAME POSTGRES_DATABASE_NAME POSTGRES_ADMIN_USER POSTGRES_ADMIN_PASSWORD
-  "${PYTHON_CMD[@]}" - "${AZURE_POSTGRES_SERVER_NAME}" "${POSTGRES_DATABASE_NAME}" "${POSTGRES_ADMIN_USER}" "${POSTGRES_ADMIN_PASSWORD}" <<'PY' | tr -d '\r\n'
+  # La password viaja por stdin (no por argv) para que no aparezca en `ps`.
+  local py_code='
 import sys
 from urllib.parse import quote_plus
 
-server_name = sys.argv[1]
-database_name = sys.argv[2]
-admin_user = sys.argv[3]
-password = quote_plus(sys.argv[4])
-
+server_name, database_name, admin_user = sys.argv[1:4]
+password = quote_plus(sys.stdin.read())
 print(
     f"postgresql+psycopg://{admin_user}:{password}"
     f"@{server_name}.postgres.database.azure.com:5432/{database_name}?sslmode=require"
 )
-PY
+'
+  printf '%s' "${POSTGRES_ADMIN_PASSWORD}" \
+    | "${PYTHON_CMD[@]}" -c "${py_code}" "${AZURE_POSTGRES_SERVER_NAME}" "${POSTGRES_DATABASE_NAME}" "${POSTGRES_ADMIN_USER}" \
+    | tr -d '\r\n'
 }
 
 build_zip_from_directory() {
