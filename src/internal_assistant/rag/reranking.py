@@ -14,6 +14,7 @@ from internal_assistant.observability.usage import record_usage
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS = {429, 503}
+VOYAGE_EU_BASE_URL = "https://eu.ai.mongodb.com"
 MAX_RERANK_ATTEMPTS = 6
 
 
@@ -231,14 +232,16 @@ def build_default_reranker() -> RerankerProvider | None:
         return None
     provider = settings.reranker_provider.strip().lower()
     if provider in {"voyage", "voyageai", "voyage_atlas"}:
-        api_key = settings.voyage_api_key or settings.reranker_api_key
-        if not api_key:
-            logger.warning("RERANKER_PROVIDER=voyage but VOYAGE_API_KEY is empty; reranker disabled")
+        if not settings.reranker_api_key:
+            logger.warning("RERANKER_PROVIDER=voyage but RERANKER_API_KEY is empty; reranker disabled")
             return None
+        base_url = settings.reranker_base_url.strip()
+        if not base_url or "127.0.0.1" in base_url or "localhost" in base_url:
+            base_url = VOYAGE_EU_BASE_URL
         return VoyageRerankerProvider(
-            base_url=settings.voyage_base_url,
-            api_key=api_key,
-            model=settings.voyage_rerank_model,
+            base_url=base_url,
+            api_key=settings.reranker_api_key,
+            model=settings.reranker_model if settings.reranker_model.startswith("rerank-") else "rerank-3-lite",
             timeout_seconds=settings.reranker_timeout_seconds,
         )
     if provider in {"cohere_azure", "azure_cohere", "cohere"}:

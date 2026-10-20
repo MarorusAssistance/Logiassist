@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guarda un secreto en .env sin mostrarlo en pantalla ni dejarlo en el historial.
-# Uso: ./scripts/set_env_secret.sh VOYAGE_API_KEY
+# Uso: ./scripts/set_env_secret.sh RERANKER_API_KEY
 set -euo pipefail
 
 NAME="${1:?Uso: $0 NOMBRE_VARIABLE}"

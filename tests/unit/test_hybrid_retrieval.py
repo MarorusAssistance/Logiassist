@@ -314,3 +314,22 @@ def test_voyage_rerank_tokens_are_priced():
         load_pricing(),
     )
     assert usd == pytest.approx(0.02)
+
+
+def test_voyage_reranker_uses_generic_reranker_settings(monkeypatch):
+    from types import SimpleNamespace
+
+    from internal_assistant.rag import reranking
+
+    settings = SimpleNamespace(
+        reranker_enabled=True,
+        reranker_provider="voyage",
+        reranker_base_url="https://eu.ai.mongodb.com",
+        reranker_api_key="k",
+        reranker_model="rerank-3",
+        reranker_timeout_seconds=5,
+    )
+    monkeypatch.setattr(reranking, "get_settings", lambda: settings)
+    provider = reranking.build_default_reranker()
+    assert isinstance(provider, reranking.VoyageRerankerProvider)
+    assert provider.model == "rerank-3" and provider.endpoint_url == "https://eu.ai.mongodb.com/v1/rerank"
