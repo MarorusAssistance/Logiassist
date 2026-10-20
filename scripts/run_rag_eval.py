@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 
 from internal_assistant.rag import RetrievalConfig
 
-from evaluation.runners import run_full_eval
+from evaluation.runners import run_full_eval, run_retrieval_eval
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -36,6 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--include-adversarial", action="store_true")
     parser.add_argument("--include-ablation", action="store_true")
     parser.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="Solo la fase de busqueda (embeddings + reranker, sin LLM): para comparar rerankers barato.",
+    )
+    parser.add_argument(
         "--use-llm-judge",
         action="store_true",
         default=os.getenv("EVAL_USE_LLM_JUDGE", "false").strip().lower() == "true",
@@ -49,16 +54,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+    retrieval_config = RetrievalConfig(top_k=args.top_k, vector_weight=args.vector_weight, text_weight=args.text_weight)
+    if args.retrieval_only:
+        report = run_retrieval_eval(
+            dataset_path=args.dataset,
+            output_dir=args.output_dir,
+            provider_name=args.provider,
+            retrieval_config=retrieval_config,
+            max_concurrency=args.max_concurrency,
+        )
+        summary = report["summary"]
+        print(f"Questions evaluated: {summary['Questions evaluated']}")
+        print(f"Retrieval hit@5: {summary['Retrieval hit@5']}  MRR: {summary['MRR']}")
+        print(f"Total cost USD: {report['cost'].get('total_usd')}")
+        return 0
     report = run_full_eval(
         dataset_path=args.dataset,
         adversarial_dataset_path=args.adversarial_dataset,
         output_dir=args.output_dir,
         provider_name=args.provider,
-        retrieval_config=RetrievalConfig(
-            top_k=args.top_k,
-            vector_weight=args.vector_weight,
-            text_weight=args.text_weight,
-        ),
+        retrieval_config=retrieval_config,
         include_adversarial=args.include_adversarial,
         include_ablation=args.include_ablation,
         use_llm_judge=args.use_llm_judge,

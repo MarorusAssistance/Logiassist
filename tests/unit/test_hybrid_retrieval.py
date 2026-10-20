@@ -272,3 +272,45 @@ def test_keyword_extraction_drops_filler_and_keeps_codes():
     assert extract_keywords("Donde esta el boton para subir una incidencia?") == ["boton", "subir", "incidencia"]
     assert extract_keywords("Que hago si ScanBridge IDP marca un CMR como ilegible") == ["ScanBridge", "IDP", "marca", "CMR", "ilegible"]
     assert build_keyword_query(["SafeGate", "acceso"], "acceso temporal en SafeGate") == "SafeGate acceso temporal"
+
+
+def test_voyage_reranker_maps_results_and_records_tokens(monkeypatch):
+    import httpx
+
+    from internal_assistant.observability.usage import metering
+    from internal_assistant.rag import reranking
+    from internal_assistant.rag.reranking import VoyageRerankerProvider
+
+    calls = []
+    request = httpx.Request("POST", "https://eu.ai.mongodb.com/v1/rerank")
+
+    def fake_post(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        body = {"data": [{"index": 1, "relevance_score": 0.91}, {"index": 0, "relevance_score": 0.12}], "usage": {"total_tokens": 321}}
+        return httpx.Response(200, request=request, json=body)
+
+    monkeypatch.setattr(reranking.httpx, "post", fake_post)
+    provider = VoyageRerankerProvider(base_url="https://eu.ai.mongodb.com", api_key="k", model="rerank-3-lite", timeout_seconds=5)
+
+    with metering() as meter:
+        results = provider.rerank(
+            query="consulta",
+            documents=[{"id": 10, "text": "a", "metadata": {"title": "Doc A"}}, {"id": 20, "text": "b", "metadata": {}}],
+            top_n=2,
+        )
+
+    assert [item.chunk_id for item in results] == [20, 10]
+    assert calls[0]["url"] == "https://eu.ai.mongodb.com/v1/rerank"
+    assert calls[0]["json"]["model"] == "rerank-3-lite" and calls[0]["json"]["top_k"] == 2
+    assert calls[0]["json"]["documents"][0].startswith("title: Doc A")
+    assert meter.events[0].input_tokens == 321 and meter.events[0].provider == "voyage"
+
+
+def test_voyage_rerank_tokens_are_priced():
+    from evaluation.cost import load_pricing, price_usage
+
+    usd, _ = price_usage(
+        {"component": "reranker", "provider": "voyage", "model": "rerank-3-lite", "input_tokens": 1_000_000, "search_units": 0},
+        load_pricing(),
+    )
+    assert usd == pytest.approx(0.02)

@@ -72,6 +72,79 @@ class HttpRerankerProvider:
         return results
 
 
+def _document_text(document: dict) -> str:
+    """Texto que ve el reranker: metadatos utiles (titulo, sistema, tipo) mas el contenido del chunk."""
+    metadata = document.get("metadata") or {}
+    return "\n".join(
+        item
+        for item in [
+            f"title: {metadata.get('source_title') or metadata.get('title') or ''}",
+            f"source_type: {metadata.get('source_type') or ''}",
+            f"source_id: {metadata.get('source_id') or ''}",
+            f"affected_system: {metadata.get('affected_system') or ''}",
+            f"department: {metadata.get('department') or ''}",
+            f"document_type: {metadata.get('document_type') or ''}",
+            f"content: {document.get('text') or ''}",
+        ]
+        if item.split(": ", 1)[-1]
+    )
+
+
+class VoyageRerankerProvider:
+    """Voyage AI (rerank-3 / rerank-3-lite) a traves de la API de MongoDB Atlas.
+
+    Con una clave de geografia Europa y el endpoint `eu.ai.mongodb.com` la inferencia se hace en la UE.
+    Factura por tokens: tokens_consulta x n_documentos + tokens de todos los documentos.
+    """
+
+    provider_name = "voyage"
+
+    def __init__(self, *, base_url: str, api_key: str, model: str, timeout_seconds: float) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model = model or "rerank-3-lite"
+        self.timeout_seconds = timeout_seconds
+
+    @property
+    def endpoint_url(self) -> str:
+        if self.base_url.endswith("/rerank"):
+            return self.base_url
+        if self.base_url.endswith("/v1"):
+            return f"{self.base_url}/rerank"
+        return f"{self.base_url}/v1/rerank"
+
+    def rerank(self, *, query: str, documents: list[dict], top_n: int) -> list[RerankResult]:
+        chunk_ids = [int(document["id"]) for document in documents]
+        response = _post_with_retry(
+            self.endpoint_url,
+            json={
+                "model": self.model,
+                "query": query,
+                "documents": [_document_text(document) for document in documents],
+                "top_k": top_n,
+                "truncation": True,
+            },
+            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+            timeout=self.timeout_seconds,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        usage = payload.get("usage") or {}
+        record_usage(
+            component="reranker",
+            purpose="rerank",
+            provider=self.provider_name,
+            model=self.model,
+            input_tokens=usage.get("total_tokens") or payload.get("total_tokens") or 0,
+        )
+        results = []
+        for item in payload.get("data") or payload.get("results") or []:
+            index = int(item["index"])
+            if 0 <= index < len(chunk_ids):
+                results.append(RerankResult(chunk_id=chunk_ids[index], score=float(item.get("relevance_score", 0.0))))
+        return results
+
+
 class CohereAzureRerankerProvider:
     provider_name = "cohere_azure"
 
@@ -90,26 +163,8 @@ class CohereAzureRerankerProvider:
         return f"{self.base_url}/v1/rerank"
 
     def rerank(self, *, query: str, documents: list[dict], top_n: int) -> list[RerankResult]:
-        chunk_ids: list[int] = []
-        cohere_documents: list[str] = []
-        for document in documents:
-            metadata = document.get("metadata") or {}
-            chunk_ids.append(int(document["id"]))
-            cohere_documents.append(
-                "\n".join(
-                    item
-                    for item in [
-                        f"title: {metadata.get('source_title') or metadata.get('title') or ''}",
-                        f"source_type: {metadata.get('source_type') or ''}",
-                        f"source_id: {metadata.get('source_id') or ''}",
-                        f"affected_system: {metadata.get('affected_system') or ''}",
-                        f"department: {metadata.get('department') or ''}",
-                        f"document_type: {metadata.get('document_type') or ''}",
-                        f"content: {document.get('text') or ''}",
-                    ]
-                    if item.split(": ", 1)[-1]
-                )
-            )
+        chunk_ids = [int(document["id"]) for document in documents]
+        cohere_documents = [_document_text(document) for document in documents]
 
         response = _post_with_retry(
             self.endpoint_url,
@@ -175,6 +230,17 @@ def build_default_reranker() -> RerankerProvider | None:
     if not settings.reranker_enabled:
         return None
     provider = settings.reranker_provider.strip().lower()
+    if provider in {"voyage", "voyageai", "voyage_atlas"}:
+        api_key = settings.voyage_api_key or settings.reranker_api_key
+        if not api_key:
+            logger.warning("RERANKER_PROVIDER=voyage but VOYAGE_API_KEY is empty; reranker disabled")
+            return None
+        return VoyageRerankerProvider(
+            base_url=settings.voyage_base_url,
+            api_key=api_key,
+            model=settings.voyage_rerank_model,
+            timeout_seconds=settings.reranker_timeout_seconds,
+        )
     if provider in {"cohere_azure", "azure_cohere", "cohere"}:
         if not settings.reranker_api_key:
             logger.warning("RERANKER_PROVIDER=%s but RERANKER_API_KEY is empty; reranker disabled", provider)

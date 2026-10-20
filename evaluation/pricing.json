@@ -2,15 +2,16 @@
   "_meta": {
     "version": 1,
     "currency": "USD",
-    "units": "chat/embeddings: USD por 1M tokens; reranker: USD por 1K search units",
+    "units": "chat/embeddings: USD por 1M tokens; reranker: USD por 1K search units (Cohere) o por 1M tokens (Voyage)",
     "sources": [
       "https://openai.com/api/pricing/",
       "https://cohere.com/pricing (rerank-v3.5; mismo precio en Azure AI Foundry serverless como Cohere-rerank-v3.5)",
       "https://platform.claude.com/docs/en/about-claude/pricing (claude-haiku-5-5; Foundry factura a tarifa estandar)",
       "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/-/4477076 (Cohere-rerank-v4.0-fast, Global Standard)",
-      "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/introducing-deepseek-v4-flash-and-v4-pro-in-microsoft-foundry/4515174 (DeepSeek-V4-Flash, precio Global; Data Zone suele ser ~10% mas)"
+      "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/introducing-deepseek-v4-flash-and-v4-pro-in-microsoft-foundry/4515174 (DeepSeek-V4-Flash, precio Global; Data Zone suele ser ~10% mas)",
+      "https://www.mongodb.com/docs/voyageai/management/billing/ (rerank-3 / rerank-3-lite; 200M tokens gratis)"
     ],
-    "updated_at": "2026-10-19",
+    "updated_at": "2026-10-20",
     "notes": "Precios de lista sin descuentos (Batch API, compromisos). Revisa los precios contra las fuentes y actualiza updated_at cuando cambien. Se puede sobrescribir con EVAL_PRICING_PATH. Claude Haiku 5.5: tarifa para prompts <=100K tokens (por encima: 0.50/2.50); las escrituras en cache (1.25x) se cuentan como input normal."
   },
   "free_providers": [
@@ -62,6 +63,12 @@
     },
     "cohere-rerank-v4.0-fast": {
       "per_1k_search_units": 2.0
+    },
+    "rerank-3-lite": {
+      "input_per_1m": 0.02
+    },
+    "rerank-3": {
+      "input_per_1m": 0.05
     }
   },
   "provider_default_models": {

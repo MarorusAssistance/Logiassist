@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="RERANKER_MODEL")
     reranker_api_key: str = Field(default="", alias="RERANKER_API_KEY")
     reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
+    # Voyage AI via MongoDB Atlas; eu.ai.mongodb.com exige una clave con geografia Europa.
+    voyage_api_key: str = Field(default="", alias="VOYAGE_API_KEY")
+    voyage_base_url: str = Field(default="https://eu.ai.mongodb.com", alias="VOYAGE_BASE_URL")
+    voyage_rerank_model: str = Field(default="rerank-3-lite", alias="VOYAGE_RERANK_MODEL")
     reranker_candidates: int = Field(default=100, alias="RERANKER_CANDIDATES")
     retrieval_context_max_tokens: int = Field(default=16000, alias="RETRIEVAL_CONTEXT_MAX_TOKENS")
     eval_max_concurrency: int = Field(default=1, alias="EVAL_MAX_CONCURRENCY")
