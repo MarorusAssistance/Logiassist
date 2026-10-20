@@ -37,6 +37,11 @@ class OpenAIProvider(LLMProvider):
         self.settings = settings
         self.client = OpenAI(api_key=settings.openai_api_key, max_retries=0, timeout=settings.llm_timeout_seconds)
 
+    def _reasoning_params(self) -> dict:
+        """Modelos de razonamiento (gpt-5.x, o-series): LLM_REASONING_EFFORT=none los deja sin razonar y rapidos."""
+        effort = str(getattr(self.settings, "llm_reasoning_effort", "") or "").strip()
+        return {"reasoning_effort": effort} if effort else {}
+
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         with start_span(
             "llm.embeddings",
@@ -85,6 +90,7 @@ class OpenAIProvider(LLMProvider):
             response = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.1,
+                **self._reasoning_params(),
                 response_format={"type": "json_object"},
                 messages=messages,
             )
@@ -143,6 +149,7 @@ class OpenAIProvider(LLMProvider):
             stream = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.1,
+                **self._reasoning_params(),
                 response_format={"type": "json_object"},
                 stream=True,
                 stream_options={"include_usage": True},
@@ -206,6 +213,7 @@ class OpenAIProvider(LLMProvider):
             response = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.0,
+                **self._reasoning_params(),
                 response_format={"type": "json_object"},
                 messages=messages,
             )

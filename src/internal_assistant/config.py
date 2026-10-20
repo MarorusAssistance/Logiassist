@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     embedding_dimensions: int = Field(default=512, alias="EMBEDDING_DIMENSIONS")
     llm_timeout_seconds: float = Field(default=120.0, alias="LLM_TIMEOUT_SECONDS")
     llm_effort: str = Field(default="low", alias="LLM_EFFORT")
+    # Solo para modelos de razonamiento via API OpenAI (p. ej. gpt-5.4-mini: "none"). Vacio = no se envia.
+    llm_reasoning_effort: str = Field(default="", alias="LLM_REASONING_EFFORT")
     azure_ai_api_key: str = Field(default="", alias="AZURE_AI_API_KEY")
     azure_ai_resource: str = Field(default="", alias="AZURE_AI_RESOURCE")
     azure_ai_base_url: str = Field(default="", alias="AZURE_AI_BASE_URL")

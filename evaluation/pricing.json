@@ -9,7 +9,8 @@
       "https://platform.claude.com/docs/en/about-claude/pricing (claude-haiku-5-5; Foundry factura a tarifa estandar)",
       "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/-/4477076 (Cohere-rerank-v4.0-fast, Global Standard)",
       "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/introducing-deepseek-v4-flash-and-v4-pro-in-microsoft-foundry/4515174 (DeepSeek-V4-Flash, precio Global; Data Zone suele ser ~10% mas)",
-      "https://www.mongodb.com/docs/voyageai/management/billing/ (rerank-3 / rerank-3-lite; 200M tokens gratis)"
+      "https://www.mongodb.com/docs/voyageai/management/billing/ (rerank-3 / rerank-3-lite; 200M tokens gratis)",
+      "https://cloudprice.net/models/azure/gpt-5.4-mini (gpt-5.4-mini Azure; verificar en la pagina oficial)"
     ],
     "updated_at": "2026-10-20",
     "notes": "Precios de lista sin descuentos (Batch API, compromisos). Revisa los precios contra las fuentes y actualiza updated_at cuando cambien. Se puede sobrescribir con EVAL_PRICING_PATH. Claude Haiku 5.5: tarifa para prompts <=100K tokens (por encima: 0.50/2.50); las escrituras en cache (1.25x) se cuentan como input normal."
@@ -44,6 +45,11 @@
       "input_per_1m": 0.19,
       "cached_input_per_1m": 0.028,
       "output_per_1m": 0.51
+    },
+    "gpt-5.4-mini": {
+      "input_per_1m": 0.75,
+      "cached_input_per_1m": 0.075,
+      "output_per_1m": 4.5
     }
   },
   "embeddings": {
