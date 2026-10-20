@@ -2,99 +2,80 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LogiAssist Demo Console</title>
+    <title>Logiassist</title>
+    <meta name="description" content="Asistente de operaciones con búsqueda en documentación e incidencias. Demo de Maroru's Assistance." />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/static/favicon-512.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:wght@300..600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <section class="workspace">
-        <header class="topbar">
-          <div class="brand">
-            <img src="/static/brand-logo.png" class="brand-mark" alt="" aria-hidden="true" />
-            <div>
-              <p class="eyebrow">Operations command center</p>
-              <h1>LogiAssist Demo Console</h1>
-              <p class="subtitle">RAG interno para documentación, incidencias y decisiones operativas.</p>
-            </div>
-          </div>
-        </header>
+    <header class="topbar on-dark">
+      <a class="brand" href="/demo">Logiassist</a>
+      <a class="byline muted" href="https://marorusassistance.com" rel="noopener">por Maroru's Assistance</a>
+    </header>
+    <p class="demo-note muted">Demo con datos ficticios de una empresa de logística. Modelos con datos en la UE.</p>
 
-        <section class="chat-panel" aria-label="Conversación">
-          <div class="chat-status" id="assistantState" aria-live="polite">
-            <span class="status-dot"></span>
-            Listo para consultar conocimiento interno.
-          </div>
-          <div id="messages" class="messages" aria-live="polite"></div>
+    <div class="layout">
+      <main class="chat" aria-label="Conversación">
+        <section id="emptyState" class="empty">
+          <h1 class="display empty__title">¿En qué te ayudo con la operación?</h1>
+          <p class="muted empty__lead">
+            Busco en procedimientos, políticas e incidencias de la empresa y te respondo con las fuentes. Si me falta un
+            dato, te lo pregunto antes de inventar.
+          </p>
+          <ul id="starterList" class="rows starter-rows"></ul>
+        </section>
+
+        <div id="messages" class="chat-log" aria-live="polite"></div>
+
+        <div class="dock">
           <form id="chatForm" class="composer">
+            <label for="messageInput" class="visually-hidden">Tu consulta</label>
             <textarea
               id="messageInput"
-              rows="3"
-              placeholder="Pregunta por un procedimiento, una incidencia conocida o un caso no resuelto..."
+              class="textarea"
+              rows="1"
+              placeholder="Escribe tu consulta operativa"
               required
             ></textarea>
-            <button id="sendButton" type="submit" class="send-button" aria-label="Enviar mensaje">
-              <span>Enviar</span>
-              <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21.7 3.3a1 1 0 0 0-1.07-.22L3.22 10.15a1 1 0 0 0 .08 1.88l7.02 2.2 2.2 7.02a1 1 0 0 0 1.88.08l7.08-17.42a1 1 0 0 0-.22-1.07ZM5.95 11.05l11.23-4.56-6.34 6.34-4.89-1.78Zm7 7-1.78-4.89 6.34-6.34-4.56 11.23Z" />
-              </svg>
-            </button>
+            <button id="sendButton" type="submit" class="btn">Enviar</button>
           </form>
-        </section>
-      </section>
-
-      <aside class="side-panel" aria-label="Demo kit">
-        <div class="side-scroll">
-          <section class="demo-hero panel-section">
-            <p class="eyebrow">Demo kit</p>
-            <h2>Empieza con un flujo guiado</h2>
-            <p class="hint">
-              Los sistemas son ficticios y representan una empresa logística demo. Usa estos accesos para enseñar
-              documentación, incidencias, aclaraciones y feedback sin memorizar nombres.
-            </p>
-            <div id="starterActions" class="starter-actions"></div>
-            <button id="surpriseButton" type="button" class="ghost-button">No sé qué preguntar</button>
-          </section>
-
-          <section class="panel-section">
-            <div class="section-title">
-              <h2>Sistemas disponibles</h2>
-              <span class="counter">10</span>
-            </div>
-            <div id="systems" class="system-list"></div>
-          </section>
-
-          <section class="panel-section scenario-section">
-            <div class="section-title">
-              <h2>Preguntas recomendadas</h2>
-              <button id="resetButton" type="button" class="text-button">Nueva conversación</button>
-            </div>
-            <div id="samples" class="sample-list"></div>
-          </section>
-
-          <section class="panel-section">
-            <div class="section-title">
-              <h2>Fuentes de la última respuesta</h2>
-              <span id="sourceCount" class="counter">0</span>
-            </div>
-            <div id="sources" class="source-list empty">Esta respuesta no incluye fuentes todavía.</div>
-          </section>
-
-          <section class="panel-section">
-            <div class="section-title">
-              <h2>Feedback</h2>
-            </div>
-            <div class="feedback-actions">
-              <button id="usefulButton" type="button" class="feedback-button" disabled>Útil</button>
-              <button id="notUsefulButton" type="button" class="feedback-button" disabled>No útil</button>
-            </div>
-            <p id="feedbackStatus" class="hint">Disponible tras recibir una respuesta.</p>
-          </section>
-
+          <p id="status" class="status muted" aria-live="polite">Enter envía · Shift+Enter, salto de línea</p>
         </div>
+      </main>
+
+      <aside class="side panel" aria-label="Explorar la demo">
+        <section class="side__block">
+          <div class="side__head">
+            <h2 class="display side__title">Explorar</h2>
+            <button id="resetButton" type="button" class="link-button">Nueva conversación</button>
+          </div>
+          <p class="muted side__note">Los sistemas son ficticios. Pulsa una fila para llevar la pregunta al chat.</p>
+        </section>
+
+        <section class="side__block">
+          <h2 class="display side__title">Sistemas</h2>
+          <ul id="systems" class="rows"></ul>
+        </section>
+
+        <section class="side__block">
+          <h2 class="display side__title">Preguntas por tema</h2>
+          <div id="samples"></div>
+        </section>
+
+        <section class="side__block">
+          <h2 class="display side__title">Fuentes de la última respuesta</h2>
+          <div id="sources" class="muted">Aún no hay respuesta.</div>
+        </section>
       </aside>
-    </main>
+    </div>
     <script src="/static/app.js" defer></script>
   </body>
 </html>

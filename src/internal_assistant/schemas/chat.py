@@ -179,3 +179,5 @@ class ChatResponse(BaseModel):
     message_id: int | None = None
     # Identificador de la peticion: localiza su traza extendida y su traza en LangSmith.
     request_id: str | None = None
+    # Comportamiento final del asistente (answer_with_sources, ask_clarification, reject_prompt_injection...).
+    behavior: str | None = None

@@ -48,6 +48,18 @@ from internal_assistant.security.prompt_guard import (
 
 logger = get_logger(__name__)
 
+_EXCERPT_HEADER_LINE = re.compile(r"^(Titulo|Sistema|Tipo|Departamento):.*$", re.MULTILINE)
+_EXCERPT_LABEL = re.compile(r"^(Descripcion|Resolucion|Contenido):\s*", re.MULTILINE)
+
+
+def _source_excerpt(content: str, limit: int = 260) -> str:
+    """Fragmento legible para mostrar: sin la cabecera de metadatos que se anade al indexar."""
+    text = _EXCERPT_LABEL.sub("", _EXCERPT_HEADER_LINE.sub("", content or ""))
+    text = " ".join(text.split())
+    if text[:1].islower():
+        text = "…" + text
+    return text[:limit]
+
 
 class ChatService:
     def __init__(self, session: Session, llm_provider: LLMProvider | None = None) -> None:
@@ -250,7 +262,7 @@ class ChatService:
             meta = response.pop("_meta", {})
             meta["retrieval_debug"] = self.last_retrieval_debug
             next_state = response.pop("_state")
-            chat_response = ChatResponse(**response, request_id=trace_run.request_id)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior=meta.get("actual_behavior"))
             meta["request_id"] = trace_run.request_id
             trace_run.set_outputs(self._trace_response_payload(chat_response))
             return chat_response, next_state, meta
@@ -310,6 +322,7 @@ class ChatService:
             if intent == "feedback" and not input_guard.blocked:
                 chat_response = self._handle_feedback_message(conversation.id, user_message.id, request)
                 chat_response.request_id = trace_run.request_id
+                chat_response.behavior = "feedback"
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -351,7 +364,7 @@ class ChatService:
                     )
                     self.session.commit()
                 response["message_id"] = assistant_message.id
-                chat_response = ChatResponse(**response, request_id=trace_run.request_id)
+                chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior="register_incident")
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -388,7 +401,7 @@ class ChatService:
                 assistant_message = self.messages.create(conversation.id, "assistant", response["answer"], intent=intent)
                 self.session.commit()
             response["message_id"] = assistant_message.id
-            chat_response = ChatResponse(**response, request_id=trace_run.request_id)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior=meta.get("actual_behavior"))
             if not input_guard.blocked:
                 # Los turnos bloqueados no entran en memoria para no reinyectarlos en turnos futuros.
                 self._index_turn_memory(
@@ -1781,7 +1794,7 @@ class ChatService:
                 source_id=item.source_id,
                 title=metadata.get("title", f"{item.source_type}-{item.source_id}"),
                 source_url=metadata.get("source_url"),
-                excerpt=item.content[:260],
+                excerpt=_source_excerpt(item.content),
                 chunk_id=item.chunk_id,
             )
             current = best_by_source.get(key)
