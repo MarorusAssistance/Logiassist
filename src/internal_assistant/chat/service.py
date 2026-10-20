@@ -17,6 +17,7 @@ from internal_assistant.config import get_settings
 from internal_assistant.llm import LLMProvider, build_default_provider
 from internal_assistant.llm.common import build_chat_messages
 from internal_assistant.observability import RagTrace, get_logger, start_span
+from internal_assistant.observability.trace_store import record_trace_event
 from internal_assistant.observability.tracing import (
     retrieval_span_attributes,
     serialize_chunks_for_langsmith,
@@ -202,6 +203,7 @@ class ChatService:
         *,
         state: dict | None = None,
         retrieval_config: RetrievalConfig | None = None,
+        trace_metadata: dict[str, Any] | None = None,
     ) -> tuple[ChatResponse, dict[str, Any], dict[str, Any]]:
         current_state = dict(state or {})
         intent = self.classify_intent(request.message, current_state)
@@ -218,9 +220,13 @@ class ChatService:
                 "conversation_id": request.conversation_id or 0,
                 "user_id_hash": user_hash(request.user_id),
                 "mode": "simulation",
+                "provider": getattr(self.settings, "llm_provider", ""),
+                "chat_model": getattr(self.settings, "chat_model", ""),
+                **(trace_metadata or {}),
             },
         ) as trace_run:
             input_guard = scan_user_input(request.message)
+            record_trace_event("input_guard", {"intent": intent, **input_guard.to_dict()})
             if input_guard.blocked:
                 response = self._blocked_input_response(
                     request.conversation_id or 0,
@@ -244,7 +250,8 @@ class ChatService:
             meta = response.pop("_meta", {})
             meta["retrieval_debug"] = self.last_retrieval_debug
             next_state = response.pop("_state")
-            chat_response = ChatResponse(**response)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id)
+            meta["request_id"] = trace_run.request_id
             trace_run.set_outputs(self._trace_response_payload(chat_response))
             return chat_response, next_state, meta
 
@@ -287,6 +294,8 @@ class ChatService:
             )
             user_message = self.messages.create(conversation.id, "user", request.message, intent=intent)
             input_guard = scan_user_input(request.message)
+            trace_run.update_metadata(conversation_id=conversation.id, user_message_id=user_message.id, intent=intent)
+            record_trace_event("input_guard", {"intent": intent, **input_guard.to_dict()})
             set_span_attributes(
                 request_span,
                 {"security.input_risk": input_guard.risk, "security.input_categories": input_guard.categories},
@@ -300,6 +309,7 @@ class ChatService:
 
             if intent == "feedback" and not input_guard.blocked:
                 chat_response = self._handle_feedback_message(conversation.id, user_message.id, request)
+                chat_response.request_id = trace_run.request_id
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -341,7 +351,7 @@ class ChatService:
                     )
                     self.session.commit()
                 response["message_id"] = assistant_message.id
-                chat_response = ChatResponse(**response)
+                chat_response = ChatResponse(**response, request_id=trace_run.request_id)
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -378,7 +388,7 @@ class ChatService:
                 assistant_message = self.messages.create(conversation.id, "assistant", response["answer"], intent=intent)
                 self.session.commit()
             response["message_id"] = assistant_message.id
-            chat_response = ChatResponse(**response)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id)
             if not input_guard.blocked:
                 # Los turnos bloqueados no entran en memoria para no reinyectarlos en turnos futuros.
                 self._index_turn_memory(
@@ -721,6 +731,9 @@ class ChatService:
                         "retrieved_count": len(retrieved),
                         "retrieval_filters": retrieval_filters.to_dict(),
                         "filter_reason": plan.filter_reason,
+                        "keyword_query": keyword_query,
+                        "retrieval_debug": self.last_retrieval_debug,
+                        "quarantined_chunk_ids": quarantined_chunk_ids,
                     }
                 )
 
@@ -760,6 +773,22 @@ class ChatService:
                     "signals.status_request": query_signals.status_request,
                 },
             )
+        low_confidence = (not memory_results) and (
+            not retrieved or confidence < self.settings.retrieval_confidence_threshold
+        )
+        record_trace_event(
+            "evidence_gate",
+            {
+                "confidence": confidence,
+                "confidence_threshold": self.settings.retrieval_confidence_threshold,
+                "memory_result_count": len(memory_results),
+                "retrieved_count": len(retrieved),
+                "low_confidence_gate": low_confidence,
+                "pre_gate_answer": bool(plan.needs_knowledge_index and self._should_pre_gate_answer(evidence_assessment)),
+                "query_signals": query_signals.to_dict(),
+                "evidence_assessment": evidence_assessment.to_dict(),
+            },
+        )
         datasource_status = {
             "conversation_memory": {
                 "requested": plan.needs_conversation_memory,
@@ -783,7 +812,13 @@ class ChatService:
             },
         }
 
-        if (not memory_results) and (not retrieved or confidence < self.settings.retrieval_confidence_threshold):
+        if low_confidence:
+            low_confidence_decision = {
+                "planner_output": planner_payload,
+                "policy_decision": "low_retrieval_confidence",
+                "confidence": confidence,
+                "confidence_threshold": self.settings.retrieval_confidence_threshold,
+            }
             clarification_attempts += 1
             state["clarification_attempts"] = clarification_attempts
             if clarification_attempts >= 3:
@@ -796,6 +831,7 @@ class ChatService:
                     related_incidents=[],
                     conversation_id=conversation_id,
                     actual_behavior="abstain_and_offer_incident_registration",
+                    decision=low_confidence_decision,
                 )
                 latency_ms = int((time.perf_counter() - started_at) * 1000)
                 if write_retrieval_logs:
@@ -844,6 +880,7 @@ class ChatService:
                 related_incidents=[],
                 conversation_id=conversation_id,
                 actual_behavior="ask_clarification",
+                decision=low_confidence_decision,
             )
             latency_ms = int((time.perf_counter() - started_at) * 1000)
             if write_retrieval_logs:
@@ -1067,6 +1104,10 @@ class ChatService:
                 {
                     "decision": serialize_decision_for_langsmith(decision),
                     "context_chunks": serialize_context_for_langsmith(context_chunks),
+                    "output_guard": {
+                        "blocked": self.last_output_blocked,
+                        "findings": self.last_output_findings,
+                    },
                 }
             )
             set_span_attributes(

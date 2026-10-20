@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from internal_assistant.config import get_settings
 from internal_assistant.repositories.retrieval import ChunkRepository
+from internal_assistant.observability.trace_store import current_recorder, record_trace_event
 from internal_assistant.observability.tracing import retrieval_span_attributes, set_span_attributes, start_span
 from internal_assistant.rag.filters import RetrievalFilters, normalize_retrieval_filters
 from internal_assistant.rag.reranking import RerankerProvider, build_default_reranker
@@ -79,6 +80,93 @@ def _source_keys(items: list) -> list[str]:
         if key not in keys:
             keys.append(key)
     return keys
+
+
+def _title(metadata: dict | None) -> str:
+    metadata = metadata or {}
+    return str(metadata.get("title") or metadata.get("source_title") or "")
+
+
+def _row_stage(rows: list[dict]) -> list[dict]:
+    return [
+        {
+            "rank": rank,
+            "chunk_id": row["id"],
+            "source": f"{row['source_type']}:{row['source_id']}",
+            "title": _title(row.get("metadata")),
+            "score": round(float(row.get("score") or 0.0), 6),
+        }
+        for rank, row in enumerate(rows, start=1)
+    ]
+
+
+def _retrieval_stages(
+    *,
+    vector_rows: list[dict],
+    text_rows: list[dict],
+    ordered: list["RetrievedChunk"],
+    reranked: list["RetrievedChunk"] | None,
+    reranker_candidates: int,
+    top: list["RetrievedChunk"],
+    results: list["RetrievedChunk"],
+    budget_tokens: int,
+) -> dict:
+    """Detalle de cada etapa para la traza extendida: que entra, con que puntuacion y donde se cae."""
+    vector_rank = {row["id"]: rank for rank, row in enumerate(vector_rows, start=1)}
+    text_rank = {row["id"]: rank for rank, row in enumerate(text_rows, start=1)}
+    fused_rank = {chunk.chunk_id: rank for rank, chunk in enumerate(ordered, start=1)}
+    returned_ids = {chunk.chunk_id for chunk in results}
+
+    def chunk_entry(rank: int, chunk: "RetrievedChunk", **extra) -> dict:
+        return {
+            "rank": rank,
+            "chunk_id": chunk.chunk_id,
+            "source": f"{chunk.source_type}:{chunk.source_id}",
+            "title": _title(chunk.metadata),
+            **extra,
+        }
+
+    return {
+        "vector": _row_stage(vector_rows),
+        "bm25": _row_stage(text_rows),
+        "fused": [
+            chunk_entry(
+                rank,
+                chunk,
+                rrf_score=round(chunk.hybrid_score, 6),
+                vector_rank=vector_rank.get(chunk.chunk_id),
+                bm25_rank=text_rank.get(chunk.chunk_id),
+            )
+            for rank, chunk in enumerate(ordered, start=1)
+        ],
+        "reranked": [
+            chunk_entry(rank, chunk, rerank_score=round(chunk.rerank_score, 6), fused_rank=fused_rank.get(chunk.chunk_id))
+            for rank, chunk in enumerate((reranked or [])[:reranker_candidates], start=1)
+        ],
+        "token_budget": {
+            "budget_tokens": budget_tokens,
+            "top_k_tokens": sum(estimate_tokens(chunk.content) for chunk in top),
+            "kept_tokens": sum(estimate_tokens(chunk.content) for chunk in results),
+            "dropped": [
+                chunk_entry(rank, chunk, tokens=estimate_tokens(chunk.content))
+                for rank, chunk in enumerate(top, start=1)
+                if chunk.chunk_id not in returned_ids
+            ],
+        },
+        "returned": [
+            chunk_entry(
+                rank,
+                chunk,
+                final_score=round(chunk.final_score, 6),
+                rerank_score=round(chunk.rerank_score, 6),
+                rrf_score=round(chunk.hybrid_score, 6),
+                vector_score=round(chunk.vector_score, 6),
+                bm25_score=round(chunk.text_score, 6),
+                tokens=estimate_tokens(chunk.content),
+            )
+            for rank, chunk in enumerate(results, start=1)
+        ],
+    }
 
 
 def estimate_tokens(text: str) -> int:
@@ -160,15 +248,62 @@ class HybridRetriever:
                 },
             ) as merge_span:
                 ordered = self._merge_rows(vector_rows, text_rows, effective)
+                filtered_attempt = None
                 if effective_filters.active() and len(ordered) < effective.top_k:
                     filter_fallback = True
+                    filtered_attempt = {
+                        "filters": effective_filters.to_dict(),
+                        "vector": _row_stage(vector_rows),
+                        "bm25": _row_stage(text_rows),
+                        "fused_count": len(ordered),
+                    }
                     vector_rows = self.chunk_repository.vector_search(query_embedding, limit=effective.vector_candidates)
                     text_rows = self.chunk_repository.text_search(text_query, limit=effective.text_candidates)
                     ordered = self._merge_rows(vector_rows, text_rows, effective)
 
+                rerank_started = time.perf_counter()
                 reranked = self._rerank(query, ordered)
+                rerank_ms = round((time.perf_counter() - rerank_started) * 1000, 1)
                 ranked = reranked or ordered
-                results = self._fit_token_budget(ranked[: effective.top_k])
+                top = ranked[: effective.top_k]
+                results = self._fit_token_budget(top)
+                if current_recorder() is not None:
+                    record_trace_event(
+                        "retrieval.hybrid_search",
+                        {
+                            "query": query,
+                            "keyword_query": text_query,
+                            "config": {
+                                "top_k": effective.top_k,
+                                "vector_weight": effective.vector_weight,
+                                "text_weight": effective.text_weight,
+                                "vector_candidates": effective.vector_candidates,
+                                "text_candidates": effective.text_candidates,
+                                "rrf_k": effective.rrf_k,
+                                "reranker_candidates": getattr(self, "reranker_candidates", 0),
+                                "context_max_tokens": getattr(self, "context_max_tokens", 0),
+                            },
+                            "filters": effective_filters.to_dict(),
+                            "filter_fallback": filter_fallback,
+                            "filtered_attempt": filtered_attempt,
+                            "reranker": {
+                                "enabled": bool(self.reranker),
+                                "applied": bool(reranked),
+                                "model": getattr(self.reranker, "model", "") if self.reranker else "",
+                                "latency_ms": rerank_ms,
+                            },
+                            "stages": _retrieval_stages(
+                                vector_rows=vector_rows,
+                                text_rows=text_rows,
+                                ordered=ordered,
+                                reranked=reranked,
+                                reranker_candidates=max(1, int(getattr(self, "reranker_candidates", len(ordered)) or 1)),
+                                top=top,
+                                results=results,
+                                budget_tokens=int(getattr(self, "context_max_tokens", 16000)),
+                            ),
+                        },
+                    )
                 self.last_debug = {
                     "keyword_query": text_query,
                     "filter_fallback": filter_fallback,

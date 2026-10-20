@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 from types import TracebackType
 from typing import Any
 from uuid import UUID, uuid4
@@ -15,6 +16,16 @@ from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
 
 from internal_assistant.config import get_settings
+from internal_assistant.observability.trace_store import (
+    TraceRecorder,
+    activate_recorder,
+    build_trace_sink,
+    current_recorder,
+    deactivate_recorder,
+    store_trace,
+    trace_path,
+)
+from internal_assistant.observability.usage import metering
 
 
 logger = logging.getLogger(__name__)
@@ -254,8 +265,27 @@ class LangSmithRun:
         self.start_time: datetime | None = None
         self.outputs: dict[str, Any] | None = None
         self.created = False
+        self._owned_recorder: TraceRecorder | None = None
+        self._recorder: TraceRecorder | None = None
+        self._recorder_token = None
+        self._sink = None
+        self._meter_cm = None
+        self._meter = None
+        self._t0 = 0.0
+        self._start_ms = 0.0
+
+    @property
+    def request_id(self) -> str:
+        """Identificador de la peticion: el mismo para la traza extendida y para LangSmith."""
+        return str(self.trace_id)
+
+    def update_metadata(self, **values: Any) -> None:
+        self.metadata.update({key: value for key, value in values.items() if value is not None})
+        if self._owned_recorder is not None:
+            self._owned_recorder.update_metadata(**values)
 
     def __enter__(self) -> "LangSmithRun":
+        self._open_extended_trace()
         client = self.trace._client()
         if not client:
             return self
@@ -290,6 +320,7 @@ class LangSmithRun:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        self._close_extended_trace(exc)
         client = self.trace._client()
         if not client or not self.created:
             return
@@ -302,6 +333,59 @@ class LangSmithRun:
             )
         except Exception as update_exc:
             logger.warning("No se pudo cerrar run de LangSmith %s: %s", self.name, update_exc)
+
+    def _open_extended_trace(self) -> None:
+        """La raiz de una peticion abre la traza extendida; los hijos se apuntan a ella."""
+        self._t0 = time.perf_counter()
+        recorder = current_recorder()
+        if recorder is None and self.parent_run_id is None:
+            sink = build_trace_sink(self.trace.settings)
+            if sink is not None:
+                recorder = TraceRecorder(request_id=str(self.trace_id), metadata=dict(self.metadata))
+                self._owned_recorder = recorder
+                self._sink = sink
+                self._recorder_token = activate_recorder(recorder)
+                # Uso real de tokens de esta peticion; se suma tambien al medidor de una eval si lo hay.
+                self._meter_cm = metering()
+                self._meter = self._meter_cm.__enter__()
+        self._recorder = recorder
+        self._start_ms = recorder.elapsed_ms() if recorder else 0.0
+
+    def _close_extended_trace(self, exc: BaseException | None) -> None:
+        recorder = self._recorder
+        if recorder is None:
+            return
+        error = f"{type(exc).__name__}: {exc}" if exc else None
+        if self._owned_recorder is None:
+            recorder.add_run(
+                {
+                    "run_id": str(self.run_id),
+                    "parent_run_id": str(self.parent_run_id) if self.parent_run_id else None,
+                    "name": self.name,
+                    "run_type": self.run_type,
+                    "start_ms": self._start_ms,
+                    "duration_ms": round((time.perf_counter() - self._t0) * 1000, 1),
+                    "metadata": self.metadata,
+                    "inputs": self.inputs,
+                    "outputs": self.outputs or {},
+                    "error": error,
+                }
+            )
+            return
+        try:
+            self._meter_cm.__exit__(None, None, None)
+            document = recorder.build_document(
+                inputs={"name": self.name, **self.inputs},
+                outputs=self.outputs,
+                error=error,
+                usage=self._meter.aggregate(),
+            )
+            store_trace(document, trace_path(self.trace.settings, recorder), self._sink)
+        except Exception as store_exc:
+            logger.warning("No se pudo preparar la traza extendida %s: %s", self.name, store_exc)
+        finally:
+            deactivate_recorder(self._recorder_token)
+            self._owned_recorder = None
 
     def child(
         self,

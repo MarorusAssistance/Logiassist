@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Session
 
 from internal_assistant.models import Chunk, RetrievalLog
+from internal_assistant.observability.trace_store import record_trace_event
 from internal_assistant.observability.tracing import set_span_attributes, start_span
 from internal_assistant.rag.filters import RetrievalFilters, normalize_retrieval_filters
 
@@ -198,6 +199,28 @@ class ChunkRepository:
                 average_length=float(stats["avgdl"] or 1.0),
             )[:limit]
             payload = [{key: value for key, value in row.items() if key not in {"tsv", "doc_len", "term_freqs"}} for row in scored]
+            record_trace_event(
+                "retrieval.bm25",
+                {
+                    "query": query,
+                    "lexemes": terms,
+                    "document_frequency": document_frequency,
+                    "total_documents": int(stats["n"] or 0),
+                    "average_length": round(float(stats["avgdl"] or 1.0), 2),
+                    "matched_candidates": len(rows),
+                    "filters_active": bool(filter_sql),
+                    "top": [
+                        {
+                            "chunk_id": row["id"],
+                            "source": f"{row['source_type']}:{row['source_id']}",
+                            "bm25": round(float(row.get("score") or 0.0), 4),
+                            "doc_len": row.get("doc_len"),
+                            "term_freqs": row.get("term_freqs"),
+                        }
+                        for row in scored[:limit]
+                    ],
+                },
+            )
             scores = [float(row.get("score") or 0.0) for row in payload]
             set_span_attributes(
                 span,

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "4003538176656806027"
+      "templateHash": "16213547270563959600"
     }
   },
   "parameters": {
@@ -119,6 +119,7 @@
     "functionsPlanName": "[take(format('{0}-func-plan', variables('baseName')), 40)]",
     "indexerFunctionName": "[take(format('{0}-indexer', variables('baseName')), 60)]",
     "incidentsFunctionName": "[take(format('{0}-incidents', variables('baseName')), 60)]",
+    "traceContainerName": "rag-traces",
     "storageAccountName": "[toLower(take(format('st{0}', uniqueString(resourceGroup().id, parameters('projectName'), parameters('environmentName'))), 24))]",
     "postgresServerName": "[take(format('{0}-pg', variables('baseName')), 63)]",
     "postgresHost": "[format('{0}.postgres.database.azure.com', variables('postgresServerName'))]",
@@ -460,7 +461,7 @@
             "value": "[join(parameters('allowedOrigins'), ',')]"
           },
           "appSettings": {
-            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('secretSettingValues').databaseUrl), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', variables('secretSettingValues').openAiApiKey), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', variables('secretSettingValues').adminApiKey), createObject('name', 'APP_SHARED_SECRET', 'value', variables('secretSettingValues').appSharedSecret), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'ALLOWED_ORIGINS', 'value', join(parameters('allowedOrigins'), ',')), createObject('name', 'BOT_ENDPOINT', 'value', variables('botEndpoint')), createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'MICROSOFT_APP_ID', 'value', parameters('microsoftAppId')), createObject('name', 'MICROSOFT_APP_PASSWORD', 'value', variables('secretSettingValues').microsoftAppPassword), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true')))]"
+            "value": "[concat(createArray(createObject('name', 'APP_ENV', 'value', parameters('environmentName')), createObject('name', 'APP_NAME', 'value', 'internal-assistant-mvp'), createObject('name', 'DATABASE_URL', 'value', variables('secretSettingValues').databaseUrl), createObject('name', 'LLM_PROVIDER', 'value', 'openai'), createObject('name', 'EMBEDDINGS_PROVIDER', 'value', 'openai'), createObject('name', 'OPENAI_API_KEY', 'value', variables('secretSettingValues').openAiApiKey), createObject('name', 'CHAT_MODEL', 'value', parameters('chatModel')), createObject('name', 'EMBEDDING_MODEL', 'value', parameters('embeddingModel')), createObject('name', 'EMBEDDING_DIMENSIONS', 'value', string(parameters('embeddingDimensions'))), createObject('name', 'ADMIN_API_KEY', 'value', variables('secretSettingValues').adminApiKey), createObject('name', 'APP_SHARED_SECRET', 'value', variables('secretSettingValues').appSharedSecret), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName'))), '2025-04-01').outputs.connectionString.value), createObject('name', 'LOG_LEVEL', 'value', 'INFO')), createArray(createObject('name', 'ALLOWED_ORIGINS', 'value', join(parameters('allowedOrigins'), ',')), createObject('name', 'BOT_ENDPOINT', 'value', variables('botEndpoint')), createObject('name', 'CUSTOM_INCIDENTS_API_BASE_URL', 'value', format('https://{0}/api', variables('incidentsFunctionHostname'))), createObject('name', 'INDEXER_API_BASE_URL', 'value', format('https://{0}/api', variables('indexerFunctionHostname'))), createObject('name', 'MICROSOFT_APP_ID', 'value', parameters('microsoftAppId')), createObject('name', 'MICROSOFT_APP_PASSWORD', 'value', variables('secretSettingValues').microsoftAppPassword), createObject('name', 'PYTHONPATH', 'value', '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'), createObject('name', 'TRACE_STORE', 'value', 'azure_blob'), createObject('name', 'TRACE_STORE_ACCOUNT_URL', 'value', format('https://{0}.blob.{1}', variables('storageAccountName'), environment().suffixes.storage)), createObject('name', 'TRACE_STORE_CONTAINER', 'value', variables('traceContainerName')), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'true')))]"
           }
         },
         "template": {
@@ -567,6 +568,154 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', format('{0}-insights', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('{0}-trace-storage', variables('baseName'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "storageAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('baseName'))), '2025-04-01').outputs.storageAccountName.value]"
+          },
+          "containerName": {
+            "value": "[variables('traceContainerName')]"
+          },
+          "writerPrincipalIds": {
+            "value": [
+              "[reference(resourceId('Microsoft.Resources/deployments', format('{0}-app-service', variables('baseName'))), '2025-04-01').outputs.principalId.value]"
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "13306480081908029680"
+            }
+          },
+          "parameters": {
+            "storageAccountName": {
+              "type": "string"
+            },
+            "containerName": {
+              "type": "string",
+              "defaultValue": "rag-traces",
+              "metadata": {
+                "description": "Contenedor privado para las trazas."
+              }
+            },
+            "writerPrincipalIds": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Identidades administradas que escriben trazas (Web App)."
+              }
+            },
+            "retentionDays": {
+              "type": "int",
+              "defaultValue": 90,
+              "minValue": 1,
+              "metadata": {
+                "description": "Dias que se conservan las trazas antes de borrarse automaticamente."
+              }
+            }
+          },
+          "variables": {
+            "blobDataContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]"
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', parameters('containerName'))]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/managementPolicies",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {
+                "policy": {
+                  "rules": [
+                    {
+                      "name": "expire-rag-traces",
+                      "enabled": true,
+                      "type": "Lifecycle",
+                      "definition": {
+                        "filters": {
+                          "blobTypes": [
+                            "blockBlob"
+                          ],
+                          "prefixMatch": [
+                            "[format('{0}/', parameters('containerName'))]"
+                          ]
+                        },
+                        "actions": {
+                          "baseBlob": {
+                            "delete": {
+                              "daysAfterModificationGreaterThan": "[parameters('retentionDays')]"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "copy": {
+                "name": "writers",
+                "count": "[length(parameters('writerPrincipalIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', parameters('containerName'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', parameters('containerName')), parameters('writerPrincipalIds')[copyIndex()], variables('blobDataContributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('blobDataContributorRoleId')]",
+                "principalId": "[parameters('writerPrincipalIds')[copyIndex()]]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', parameters('containerName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "containerName": {
+              "type": "string",
+              "value": "[parameters('containerName')]"
+            },
+            "blobEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').primaryEndpoints.blob]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-app-service', variables('baseName')))]",
+        "[resourceId('Microsoft.Resources/deployments', format('{0}-storage', variables('baseName')))]"
       ]
     },
     {

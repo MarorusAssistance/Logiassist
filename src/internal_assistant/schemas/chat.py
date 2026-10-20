@@ -177,3 +177,5 @@ class ChatResponse(BaseModel):
     created_ticket_id: int | None = None
     created_ticket_external_id: str | None = None
     message_id: int | None = None
+    # Identificador de la peticion: localiza su traza extendida y su traza en LangSmith.
+    request_id: str | None = None

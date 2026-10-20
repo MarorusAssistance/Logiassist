@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import time
 
 from openai import BadRequestError, OpenAI
 
@@ -20,6 +21,7 @@ from internal_assistant.llm.anthropic_foundry_provider import AnthropicFoundryPr
 from internal_assistant.llm.mock_provider import MockLLMProvider
 from internal_assistant.llm.openai_compatible_provider import OpenAICompatibleProvider
 from internal_assistant.observability.tracing import set_span_attributes, start_span
+from internal_assistant.observability.trace_store import record_llm_call
 from internal_assistant.observability.usage import record_chat_usage, record_embedding_usage
 from internal_assistant.schemas.chat import AssistantDecision, ChatPlan
 
@@ -74,21 +76,33 @@ class OpenAIProvider(LLMProvider):
                 "llm.timeout_seconds": self.settings.llm_timeout_seconds,
             },
         ) as span:
+            messages = build_chat_messages(
+                question=question,
+                context_chunks=context_chunks,
+                conversation_state=conversation_state,
+            )
+            started = time.perf_counter()
             response = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.1,
                 response_format={"type": "json_object"},
-                messages=build_chat_messages(
-                    question=question,
-                    context_chunks=context_chunks,
-                    conversation_state=conversation_state,
-                ),
+                messages=messages,
             )
             record_chat_usage(
                 getattr(response, "usage", None),
                 provider=self.provider_name,
                 model=self.settings.chat_model,
                 purpose="answer",
+            )
+            record_llm_call(
+                purpose="answer",
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                messages=messages,
+                raw_output=response.choices[0].message.content,
+                usage=getattr(response, "usage", None),
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+                finish_reason=getattr(response.choices[0], "finish_reason", None),
             )
             decision = parse_assistant_decision(response.choices[0].message.content)
             set_span_attributes(
@@ -120,17 +134,19 @@ class OpenAIProvider(LLMProvider):
             },
         ) as span:
             extractor = JsonAnswerStreamExtractor()
+            messages = build_chat_messages(
+                question=question,
+                context_chunks=context_chunks,
+                conversation_state=conversation_state,
+            )
+            started = time.perf_counter()
             stream = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.1,
                 response_format={"type": "json_object"},
                 stream=True,
                 stream_options={"include_usage": True},
-                messages=build_chat_messages(
-                    question=question,
-                    context_chunks=context_chunks,
-                    conversation_state=conversation_state,
-                ),
+                messages=messages,
             )
             stream_usage = None
             for chunk in stream:
@@ -148,6 +164,15 @@ class OpenAIProvider(LLMProvider):
                     model=self.settings.chat_model,
                     purpose="answer",
                 )
+            record_llm_call(
+                purpose="answer",
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                messages=messages,
+                raw_output=extractor.raw_json,
+                usage=stream_usage,
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            )
             decision = parse_assistant_decision(extractor.raw_json)
             set_span_attributes(
                 span,
@@ -172,21 +197,33 @@ class OpenAIProvider(LLMProvider):
                 "llm.timeout_seconds": self.settings.llm_timeout_seconds,
             },
         ) as span:
+            messages = build_planner_messages(
+                message=message,
+                recent_messages=recent_messages,
+                conversation_state=conversation_state,
+            )
+            started = time.perf_counter()
             response = self.client.chat.completions.create(
                 model=self.settings.chat_model,
                 temperature=0.0,
                 response_format={"type": "json_object"},
-                messages=build_planner_messages(
-                    message=message,
-                    recent_messages=recent_messages,
-                    conversation_state=conversation_state,
-                ),
+                messages=messages,
             )
             record_chat_usage(
                 getattr(response, "usage", None),
                 provider=self.provider_name,
                 model=self.settings.chat_model,
                 purpose="planner",
+            )
+            record_llm_call(
+                purpose="planner",
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                messages=messages,
+                raw_output=response.choices[0].message.content,
+                usage=getattr(response, "usage", None),
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+                finish_reason=getattr(response.choices[0], "finish_reason", None),
             )
             plan = parse_chat_plan(response.choices[0].message.content, fallback_message=message)
             set_span_attributes(

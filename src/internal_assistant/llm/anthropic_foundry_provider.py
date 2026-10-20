@@ -11,6 +11,7 @@ Diferencias frente al provider de OpenAI:
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterator
 from typing import Any
 
@@ -26,6 +27,7 @@ from internal_assistant.llm.common import (
 )
 from internal_assistant.llm.streaming import ChatStreamEvent, JsonAnswerStreamExtractor
 from internal_assistant.observability.tracing import set_span_attributes, start_span
+from internal_assistant.observability.trace_store import record_llm_call
 from internal_assistant.observability.usage import record_usage
 from internal_assistant.schemas.chat import AssistantDecision, ChatPlan
 
@@ -164,6 +166,7 @@ class AnthropicFoundryProvider(LLMProvider):
     def complete_json(self, *, messages: list[dict[str, str]], schema: dict[str, Any], purpose: str, max_tokens: int) -> tuple[str, str]:
         """Llamada generica con salida JSON validada. Devuelve (texto, stop_reason)."""
         system, conversation = _split_messages(messages)
+        started = time.perf_counter()
         message = self.client.messages.create(
             model=self.settings.chat_model,
             max_tokens=max_tokens,
@@ -172,7 +175,18 @@ class AnthropicFoundryProvider(LLMProvider):
             output_config=self._output_config(schema),
         )
         self._record(message, purpose)
-        return _response_text(message), message.stop_reason or ""
+        text = _response_text(message)
+        record_llm_call(
+            purpose=purpose,
+            provider=self.provider_name,
+            model=self.settings.chat_model,
+            messages=messages,
+            raw_output=text,
+            usage=getattr(message, "usage", None),
+            latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            finish_reason=message.stop_reason,
+        )
+        return text, message.stop_reason or ""
 
     def generate_chat_response(self, *, question: str, context_chunks: list[dict], conversation_state: dict) -> AssistantDecision:
         with start_span(
@@ -238,6 +252,19 @@ class AnthropicFoundryProvider(LLMProvider):
                         yield ChatStreamEvent(kind="token", text=token)
                 final_message = stream.get_final_message()
             self._record(final_message, "answer")
+            record_llm_call(
+                purpose="answer",
+                provider=self.provider_name,
+                model=self.settings.chat_model,
+                messages=build_chat_messages(
+                    question=question,
+                    context_chunks=context_chunks,
+                    conversation_state=conversation_state,
+                ),
+                raw_output=extractor.raw_json,
+                usage=getattr(final_message, "usage", None),
+                finish_reason=final_message.stop_reason,
+            )
             set_span_attributes(span, {"llm.stop_reason": final_message.stop_reason or "", "llm.streamed": True})
             if final_message.stop_reason == "refusal":
                 decision = AssistantDecision(answer=REFUSAL_ANSWER)

@@ -60,6 +60,7 @@ def _evaluate_scenario(
                 request,
                 state=state,
                 retrieval_config=retrieval_config,
+                trace_metadata={"eval_scenario_id": turn.scenario_id, "eval_turn_id": turn.turn_id},
             )
             verdict = evaluator.judge(turn, response, meta)
 
@@ -81,6 +82,7 @@ def _evaluate_scenario(
             "retrieved_chunk_ids": [item.chunk_id for item in meta.get("retrieved", [])],
             "retrieval_diagnosis": diagnose_retrieval(list(turn.expected_source_ids), meta.get("retrieval_debug")),
             "latency_ms": meta.get("latency_ms", 0),
+            "request_id": meta.get("request_id"),
             **usage_row_fields(turn_meter, pricing),
             **verdict,
         }
