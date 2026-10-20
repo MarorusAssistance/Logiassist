@@ -1310,6 +1310,8 @@ class ChatService:
         if self.last_output_blocked:
             sources = []
             related_incident_objects = []
+        else:
+            sources = self._mark_used_sources(sources, retrieved, decision.used_chunk_ids)
         state["clarification_attempts"] = 0
         state["offer_incident"] = False
         actual_behavior = (
@@ -1782,6 +1784,14 @@ class ChatService:
         if len(detail) > 160:
             detail = detail[:157].rstrip() + "..."
         return f"- [{index}] {source_type} {source.source_id} - {title}: {detail}"
+
+    def _mark_used_sources(self, sources: list[SourceSnippet], retrieved: list, used_chunk_ids: list[int]) -> list[SourceSnippet]:
+        """Marca las fuentes que el modelo cito y las pone primero, manteniendo el orden de relevancia."""
+        used_ids = set(used_chunk_ids or [])
+        used_keys = {(str(item.source_type), int(item.source_id)) for item in retrieved if item.chunk_id in used_ids}
+        for source in sources:
+            source.used = (str(source.source_type), int(source.source_id)) in used_keys
+        return sorted(sources, key=lambda source: not source.used)
 
     def _build_visible_sources(self, retrieved: list) -> list[SourceSnippet]:
         best_by_source: dict[tuple[str, int], tuple[int, float, SourceSnippet]] = {}

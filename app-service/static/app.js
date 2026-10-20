@@ -114,7 +114,7 @@ const sampleGroups = [
   },
 ];
 
-const pendingStatuses = ["Entendiendo la consulta…", "Buscando en documentación e incidencias…", "Redactando la respuesta…"];
+const pendingStatuses = ["Entendiendo la consulta…", "Buscando en documentación e incidencias…", "Ordenando las fuentes por relevancia…", "Preparando la respuesta…"];
 const IDLE_STATUS = "Enter envía · Shift+Enter, salto de línea";
 
 const state = {
@@ -178,14 +178,18 @@ function setStatus(text) {
   elements.status.textContent = text;
 }
 
-function startPendingStatus() {
+function startPendingStatus(onStep) {
   stopPendingStatus();
   let index = 0;
-  setStatus(pendingStatuses[index]);
+  const show = () => {
+    setStatus(pendingStatuses[index]);
+    onStep?.(pendingStatuses[index]);
+  };
+  show();
   state.statusTimer = window.setInterval(() => {
     index = Math.min(index + 1, pendingStatuses.length - 1);
-    setStatus(pendingStatuses[index]);
-  }, 1400);
+    show();
+  }, 1600);
 }
 
 function stopPendingStatus(text = IDLE_STATUS) {
@@ -214,16 +218,62 @@ function appendAssistantMessage() {
   const item = el("article", "msg msg--assistant");
   item.dataset.turn = String(state.turn);
   const body = el("div", "msg__body");
-  const live = el("p", "msg__live");
-  const caret = el("span", "stream-caret");
-  caret.setAttribute("aria-hidden", "true");
-  live.append(document.createTextNode(""), caret);
-  body.append(live);
+  const thinking = el("p", "msg__thinking", pendingStatuses[0]);
+  body.append(thinking);
   item.append(el("div", "msg__who", "Logiassist"), body);
   elements.messages.append(item);
-  return { item, body, live };
+  return { item, body, thinking, stream: null };
 }
 
+/* Revela el texto a ritmo constante aunque los tokens lleguen a rachas: el buffer de red
+   y lo que se pinta van desacoplados, con un paso por frame que crece si se acumula retraso. */
+class SmoothText {
+  constructor(body, turn) {
+    this.body = body;
+    this.turn = turn;
+    this.target = "";
+    this.shown = 0;
+    this.frame = null;
+    this.finished = null;
+    this.reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  push(text) {
+    this.target += text;
+    this.schedule();
+  }
+
+  schedule() {
+    if (this.frame === null) this.frame = window.requestAnimationFrame(() => this.tick());
+  }
+
+  tick() {
+    this.frame = null;
+    const backlog = this.target.length - this.shown;
+    if (backlog > 0) {
+      const step = this.reduceMotion ? backlog : Math.max(1, Math.ceil(backlog / 12));
+      this.shown = Math.min(this.target.length, this.shown + step);
+      renderAnswerBody(this.body, this.target.slice(0, this.shown), this.turn, 0);
+      const caret = el("span", "stream-caret");
+      caret.setAttribute("aria-hidden", "true");
+      let tail = this.body.lastElementChild || this.body;
+      if (tail.matches("ul, ol") && tail.lastElementChild) tail = tail.lastElementChild;
+      tail.append(caret);
+      followStream();
+    }
+    if (this.shown < this.target.length) this.schedule();
+    else if (this.finished) this.finished();
+  }
+
+  /* Espera a que termine de revelarse lo recibido antes de pintar la respuesta final. */
+  drain() {
+    if (this.shown >= this.target.length) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.finished = resolve;
+      this.schedule();
+    });
+  }
+}
 function appendErrorMessage(text) {
   const item = el("article", "msg msg--assistant msg--error");
   item.append(el("div", "msg__who", "Logiassist"), el("div", "msg__body", text));
@@ -233,6 +283,25 @@ function appendErrorMessage(text) {
 
 function scrollToEnd() {
   window.scrollTo({ top: document.body.scrollHeight, behavior: "auto" });
+}
+
+function isNearEnd() {
+  return document.body.scrollHeight - (window.scrollY + window.innerHeight) < 160;
+}
+
+/* Durante el streaming solo se sigue el final si el usuario no ha subido a leer. */
+function followStream() {
+  if (isNearEnd()) scrollToEnd();
+}
+
+function revealAnswer(item) {
+  const rect = item.getBoundingClientRect();
+  const dock = document.querySelector(".dock").getBoundingClientRect().height;
+  if (rect.height > window.innerHeight - dock - 56) {
+    window.scrollTo({ top: window.scrollY + rect.top - 72, behavior: "smooth" });
+  } else {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
 }
 
 /* Texto en línea: **negrita** y citas "[2]" enlazadas a su fila de fuente. Nunca innerHTML. */
@@ -300,7 +369,7 @@ function renderAnswerBody(body, text, turn, sourceCount) {
 
 const INCIDENT_STATUS = { resolved: "resuelta", open: "abierta", in_progress: "en curso", closed: "cerrada", pending: "pendiente" };
 
-function evidenceFor(response) {
+function evidenceFor(response, usedCount) {
   const behavior = response.behavior || "";
   const sourceCount = (response.sources || []).length;
   if (behavior === "reject_prompt_injection") {
@@ -313,7 +382,8 @@ function evidenceFor(response) {
     return { kind: "weak", text: "Evidencia débil: necesito un dato más" };
   }
   if (sourceCount > 0) {
-    return { kind: "ok", text: `Evidencia suficiente · ${sourceCount} ${sourceCount === 1 ? "fuente" : "fuentes"}` };
+    const basis = usedCount ? `basada en ${usedCount} de ${sourceCount} fuentes consultadas` : `${sourceCount} fuentes consultadas`;
+    return { kind: "ok", text: `Evidencia suficiente · ${basis}` };
   }
   return null;
 }
@@ -328,45 +398,77 @@ function truncate(value, maxLength = 220) {
   return text.length <= maxLength ? text : `${text.slice(0, maxLength - 1).trim()}…`;
 }
 
+function statusMap(relatedIncidents) {
+  return new Map(
+    relatedIncidents.map((incident) => [incident.id, INCIDENT_STATUS[incident.status] || incident.status || "sin estado"])
+  );
+}
+
+function sourceMeta(source, statusById) {
+  const status = source.source_type === "incident" ? statusById.get(source.source_id) : null;
+  return status ? `${sourceLabel(source)} · ${status}` : sourceLabel(source);
+}
+
 function sourceRow(source, index, turn, statusById) {
   const row = el("li", "source-row");
   if (turn) row.id = `src-${turn}-${index + 1}`;
-  const status = source.source_type === "incident" ? statusById.get(source.source_id) : null;
   const content = el("div");
+  const title = el("span", "source-row__title", source.title || sourceLabel(source));
+  if (source.used) title.append(el("span", "source-row__used", "citada"));
   content.append(
-    el("span", "source-row__title", source.title || sourceLabel(source)),
-    el("span", "source-row__meta", status ? `${sourceLabel(source)} · ${status}` : sourceLabel(source)),
-    el("span", "source-row__excerpt", truncate(source.excerpt))
+    title,
+    el("span", "source-row__meta", sourceMeta(source, statusById)),
+    el("span", "source-row__excerpt", truncate(source.excerpt, 160))
   );
   row.append(el("span", "source-row__n", String(index + 1)), content);
   return row;
 }
 
-function buildSourceRows(sources, relatedIncidents, turn, visible = Infinity) {
-  const statusById = new Map(
-    relatedIncidents.map((incident) => [incident.id, INCIDENT_STATUS[incident.status] || incident.status || "sin estado"])
-  );
-  const wrapper = el("div");
+function buildSourceRows(sources, relatedIncidents, turn) {
+  const statusById = statusMap(relatedIncidents);
   const list = el("ol", "rows");
-  sources.slice(0, visible).forEach((source, index) => list.append(sourceRow(source, index, turn, statusById)));
-  wrapper.append(list);
+  sources.forEach((source, index) => list.append(sourceRow(source, index, turn, statusById)));
+  return list;
+}
 
-  const rest = sources.slice(visible);
-  if (rest.length) {
-    const more = el("details", "more-sources");
-    more.append(el("summary", null, `Ver ${rest.length} ${rest.length === 1 ? "fuente más" : "fuentes más"}`));
-    const restList = el("ol", "rows");
-    rest.forEach((source, offset) => restList.append(sourceRow(source, visible + offset, turn, statusById)));
-    more.append(restList);
-    wrapper.append(more);
+/* Bloque de fuentes separado de la respuesta: qué usó el modelo, a la vista; todo lo consultado, plegado. */
+function buildSourcesPanel(response, turn) {
+  const sources = response.sources || [];
+  const related = response.related_incidents || [];
+  const statusById = statusMap(related);
+  const used = sources.filter((source) => source.used);
+  const highlighted = used.length ? used : sources.slice(0, 2);
+
+  const panel = el("section", "sources-panel");
+  panel.setAttribute("aria-label", "Fuentes de la respuesta");
+  panel.append(el("p", "sources-panel__label", used.length ? "Basada en" : "Fuentes principales"));
+
+  const basis = el("ul", "basis");
+  for (const source of highlighted) {
+    const item = el("li");
+    const link = el("a", "basis__title", source.title || sourceLabel(source));
+    link.href = `#src-${turn}-${sources.indexOf(source) + 1}`;
+    link.addEventListener("click", () => {
+      details.open = true;
+    });
+    item.append(link, el("span", "basis__meta", sourceMeta(source, statusById)));
+    basis.append(item);
   }
-  return wrapper;
+  panel.append(basis);
+
+  const details = el("details", "sources-all");
+  details.append(
+    el("summary", null, `Ver las ${sources.length} ${sources.length === 1 ? "fuente consultada" : "fuentes consultadas"}`),
+    buildSourceRows(sources, related, turn)
+  );
+  panel.append(details);
+  return panel;
 }
 
 function renderSidebarSources(sources = [], relatedIncidents = []) {
   elements.sources.replaceChildren();
   if (!sources.length) {
-    elements.sources.className = "muted";
+    elements.sources.className = "muted side__note";
     elements.sources.textContent = "La última respuesta no cita fuentes: fue una aclaración, un rechazo o un registro.";
     return;
   }
@@ -378,8 +480,8 @@ function buildFeedback(response) {
   const foot = el("div", "msg__foot");
   if (response.message_id && response.behavior !== "feedback") {
     const label = el("span", null, "¿Te ha servido?");
-    const useful = el("button", "link-button", "Útil");
-    const notUseful = el("button", "link-button", "No útil");
+    const useful = el("button", "chip-button", "Útil");
+    const notUseful = el("button", "chip-button", "No útil");
     useful.type = "button";
     notUseful.type = "button";
     const done = (text) => {
@@ -410,21 +512,17 @@ function applyChatResponse(response, parts) {
   }
   renderAnswerBody(parts.body, response.answer || response.fallback_text || "Respuesta vacía", turn, sources.length);
 
-  const evidence = evidenceFor(response);
+  const evidence = evidenceFor(response, sources.filter((source) => source.used).length);
   if (evidence) {
     parts.item.append(el("p", `evidence evidence--${evidence.kind}`, evidence.text));
   }
   if (sources.length) {
-    const block = el("section", "msg__sources");
-    block.append(el("h4", null, "Fuentes"), buildSourceRows(sources, related, turn, 4));
-    parts.item.append(block);
+    parts.item.append(buildSourcesPanel(response, turn));
   }
   parts.item.append(buildFeedback(response));
   renderSidebarSources(sources, related);
   stopPendingStatus();
 }
-
-/* API */
 
 async function requestJson(path, options = {}) {
   const response = await fetch(`${state.apiBase}${path}`, {
@@ -502,28 +600,39 @@ async function sendMessage(message) {
   showEmptyState(false);
   appendUserMessage(message);
   const parts = appendAssistantMessage();
-  const liveText = parts.live.firstChild;
   scrollToEnd();
-  startPendingStatus();
+  startPendingStatus((text) => {
+    parts.thinking.textContent = text;
+  });
 
   const payload = { conversation_id: state.conversationId, user_id: state.userId, message, channel: "web-demo" };
   let received = false;
+  let finalResponse = null;
   try {
     await requestStream("/chat/stream", payload, {
       onToken(text) {
-        if (!received) stopPendingStatus("Redactando la respuesta…");
+        if (!parts.stream) {
+          stopPendingStatus("Redactando la respuesta…");
+          parts.stream = new SmoothText(parts.body, parts.item.dataset.turn);
+        }
         received = true;
-        liveText.textContent += text;
-        scrollToEnd();
+        parts.stream.push(text);
       },
       onFinal(response) {
         received = true;
-        applyChatResponse(response, parts);
+        finalResponse = response;
       },
       onError(data) {
         throw new Error(data.message || "No se pudo completar la respuesta.");
       },
     });
+    if (finalResponse) {
+      if (parts.stream) await parts.stream.drain();
+      const following = isNearEnd();
+      applyChatResponse(finalResponse, parts);
+      // Al terminar, se muestra el inicio de la respuesta si es larga; si no, el final con las fuentes.
+      if (following) revealAnswer(parts.item);
+    }
   } catch (error) {
     if (!received) {
       try {
@@ -535,15 +644,14 @@ async function sendMessage(message) {
         stopPendingStatus();
       }
     } else {
-      parts.live.querySelector(".stream-caret")?.remove();
+      parts.body.querySelector(".stream-caret")?.remove();
       appendErrorMessage("La respuesta se interrumpió antes de terminar. Prueba de nuevo.");
       stopPendingStatus();
     }
   } finally {
     state.busy = false;
     elements.sendButton.disabled = false;
-    elements.messageInput.focus();
-    scrollToEnd();
+    elements.messageInput.focus({ preventScroll: true });
   }
 }
 
@@ -581,8 +689,12 @@ function fillComposer(question) {
 function rowButton(title, detail, onClick) {
   const button = el("button", "row-button");
   button.type = "button";
-  button.append(document.createTextNode(title));
-  if (detail) button.append(el("span", "row-button__detail", detail));
+  const text = el("span", "row-button__text");
+  text.append(el("span", "row-button__title", title));
+  if (detail) text.append(el("span", "row-button__detail", detail));
+  const arrow = el("span", "row-button__arrow", "→");
+  arrow.setAttribute("aria-hidden", "true");
+  button.append(text, arrow);
   button.addEventListener("click", onClick);
   const item = el("li");
   item.append(button);

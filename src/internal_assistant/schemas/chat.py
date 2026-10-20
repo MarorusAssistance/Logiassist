@@ -14,6 +14,8 @@ class SourceSnippet(BaseModel):
     source_url: str | None = None
     excerpt: str
     chunk_id: int
+    # True si el modelo cito algun chunk de esta fuente (used_chunk_ids); False si solo se consulto.
+    used: bool = False
 
 
 class AssistantDecision(BaseModel):
