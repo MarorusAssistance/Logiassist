@@ -54,6 +54,7 @@ class ChatPlan(BaseModel):
     user_context_summary: str = ""
     expected_source_preference: list[str] = Field(default_factory=list)
     mentioned_systems: list[str] = Field(default_factory=list)
+    search_keywords: list[str] = Field(default_factory=list)
     retrieval_filters: RetrievalFilters = Field(default_factory=RetrievalFilters)
     filter_reason: str = ""
     reason: str = ""
@@ -87,7 +88,7 @@ class ChatPlan(BaseModel):
             return " ".join(str(item).strip() for item in value if str(item).strip())
         return value
 
-    @field_validator("expected_source_preference", "mentioned_systems", mode="before")
+    @field_validator("expected_source_preference", "mentioned_systems", "search_keywords", mode="before")
     @classmethod
     def normalize_string_lists(cls, value):
         if value is None:

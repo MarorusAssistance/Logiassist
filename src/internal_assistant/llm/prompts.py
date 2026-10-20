@@ -52,6 +52,7 @@ Devuelve solo JSON con estos campos:
 - user_context_summary
 - expected_source_preference
 - mentioned_systems
+- search_keywords
 - retrieval_filters
 - filter_reason
 - reason
@@ -61,6 +62,7 @@ Reglas:
 - Si hace falta documentacion, tickets o procedimientos del indice, activa needs_knowledge_index.
 - Si solo pregunta por algo dicho antes, usa can_answer_from_conversation_only.
 - Las queries deben ser abstracciones semanticas limpias, no concatenaciones literales.
+- search_keywords: 3-8 terminos clave para la busqueda por palabras clave (BM25): sistemas, objetos, acciones y codigos de error. Sin relleno ni palabras como "como", "donde", "puedo". Ejemplo: "donde esta el boton para subir una incidencia" -> ["boton", "subir", "incidencia"].
 - Si falta un dato imprescindible antes de buscar, usa should_ask_clarification_first.
 - No inventes sistemas. Sistemas permitidos: LogiCore ERP, AlmaTrack WMS, RutaNexo TMS, HelpOps, DocuFlow, OnboardHub, SafeGate, QualiTrace QMS, ScanBridge IDP, OpsLake.
 - Rellena retrieval_filters solo con valores evidentes en el mensaje o memoria reciente.

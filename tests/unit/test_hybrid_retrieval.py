@@ -28,15 +28,50 @@ class StubChunkRepository:
         ]
 
 
-def test_hybrid_retrieval_combines_scores_and_orders_top_results():
+def test_hybrid_retrieval_fuses_with_rrf_and_orders_top_results():
     retriever = HybridRetriever.__new__(HybridRetriever)
     retriever.chunk_repository = StubChunkRepository()
     retriever.reranker = None
 
     results = retriever.search("consulta", [0.1] * 512, limit=3)
 
-    assert [item.chunk_id for item in results] == [1, 2, 3]
+    # Chunk 2 aparece en ambas listas (vector #2, BM25 #1): RRF lo pone primero.
+    assert [item.chunk_id for item in results] == [2, 1, 3]
     assert results[0].final_score >= results[1].final_score >= results[2].final_score
+    assert 0 < results[0].final_score <= 1
+
+
+def test_rrf_with_equal_weights_ties_symmetric_ranks():
+    from internal_assistant.rag.retrieval import RetrievalConfig
+
+    retriever = HybridRetriever.__new__(HybridRetriever)
+    vector_rows = [{"id": 1, "source_type": "document", "source_id": 1, "content": "a", "metadata": {}, "score": 0.9}]
+    text_rows = [{"id": 2, "source_type": "document", "source_id": 2, "content": "b", "metadata": {}, "score": 7.0}]
+    merged = retriever._merge_rows(vector_rows, text_rows, RetrievalConfig().normalized())
+    assert merged[0].final_score == pytest.approx(merged[1].final_score)
+
+
+def test_token_budget_drops_worst_chunks_until_it_fits():
+    from internal_assistant.rag.retrieval import RetrievedChunk
+
+    retriever = HybridRetriever.__new__(HybridRetriever)
+    retriever.context_max_tokens = 100
+    chunks = [RetrievedChunk(chunk_id=i, source_type="document", source_id=i, content="x" * 150, metadata={}) for i in range(4)]
+    kept = retriever._fit_token_budget(chunks)
+    assert [chunk.chunk_id for chunk in kept] == [0, 1]
+
+
+def test_reranker_score_alone_decides_final_order():
+    retriever = HybridRetriever.__new__(HybridRetriever)
+    retriever.chunk_repository = StubChunkRepository()
+    retriever.reranker = FakeReranker()
+    retriever.reranker_candidates = 100
+
+    results = retriever.search("consulta", [0.1] * 512, limit=3)
+
+    assert [item.chunk_id for item in results] == [3, 1, 2]
+    assert results[0].final_score == pytest.approx(0.99)
+    assert results[-1].final_score == 0.0
 
 
 def test_hybrid_retrieval_passes_filters_to_repository():
@@ -139,7 +174,7 @@ def test_hybrid_retrieval_keeps_hybrid_order_when_reranker_fails():
 
     results = retriever.search("consulta", [0.1] * 512, limit=3)
 
-    assert [item.chunk_id for item in results] == [1, 2, 3]
+    assert [item.chunk_id for item in results] == [2, 1, 3]
 
 
 def test_cohere_azure_reranker_maps_result_indexes_to_chunk_ids(monkeypatch):
@@ -217,3 +252,23 @@ def test_reranker_post_retries_on_429(monkeypatch):
 
     assert response.status_code == 200
     assert sleeps == [1.0]
+
+
+def test_bm25_rank_prefers_rare_terms_and_short_documents():
+    from internal_assistant.repositories.retrieval import bm25_rank
+
+    rows = [
+        {"id": 1, "doc_len": 100, "term_freqs": {"safegat": 1}},
+        {"id": 2, "doc_len": 20, "term_freqs": {"safegat": 1}},
+        {"id": 3, "doc_len": 20, "term_freqs": {"acces": 1}},
+    ]
+    ranked = bm25_rank(rows, document_frequency={"safegat": 2, "acces": 50}, total_documents=100, average_length=40)
+    assert [row["id"] for row in ranked] == [2, 1, 3]
+
+
+def test_keyword_extraction_drops_filler_and_keeps_codes():
+    from internal_assistant.rag.keywords import build_keyword_query, extract_keywords
+
+    assert extract_keywords("Donde esta el boton para subir una incidencia?") == ["boton", "subir", "incidencia"]
+    assert extract_keywords("Que hago si ScanBridge IDP marca un CMR como ilegible") == ["ScanBridge", "IDP", "marca", "CMR", "ilegible"]
+    assert build_keyword_query(["SafeGate", "acceso"], "acceso temporal en SafeGate") == "SafeGate acceso temporal"

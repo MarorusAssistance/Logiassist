@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from internal_assistant.rag.keywords import build_keyword_query
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 from pathlib import Path
@@ -12,6 +14,7 @@ from internal_assistant.observability.usage import metering
 from internal_assistant.rag import RetrievalConfig
 
 from evaluation.cost import build_cost_section, render_cost_markdown
+from evaluation.metrics.retrieval_metrics import diagnose_retrieval
 from evaluation.metrics import compute_retrieval_metrics
 from evaluation.runners.common import build_worst_cases, retrieval_config_to_dict, retrieval_recommendations, select_examples
 from evaluation.utils import (
@@ -36,7 +39,12 @@ def _ordered_retrieved_source_ids(retrieved) -> list[str]:
 
 def _retrieve_turn(service, turn, retrieval_config: RetrievalConfig) -> dict[str, Any]:
     started_at = time.perf_counter()
-    retrieved = service.retrieve(turn.message, retrieval_config=retrieval_config)
+    retrieved = service.retrieve(
+        turn.message,
+        retrieval_config=retrieval_config,
+        keyword_query=build_keyword_query(turn.message),
+    )
+    debug = dict(getattr(getattr(service, "retriever", None), "last_debug", {}) or {})
     latency_ms = int((time.perf_counter() - started_at) * 1000)
     retrieved_keys = _ordered_retrieved_source_ids(retrieved)
     row = {
@@ -51,6 +59,7 @@ def _retrieve_turn(service, turn, retrieval_config: RetrievalConfig) -> dict[str
         "retrieved_source_ids": retrieved_keys,
         "retrieved_source_types": sorted(retrieved_source_types(retrieved)),
         "top_score": float(retrieved[0].final_score) if retrieved else 0.0,
+        "retrieval_diagnosis": diagnose_retrieval(list(turn.expected_source_ids), debug),
         "latency_ms": latency_ms,
     }
     row["hit_at_5"] = bool(set(turn.expected_source_ids).intersection(retrieved_keys))

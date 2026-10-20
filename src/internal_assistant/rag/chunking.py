@@ -17,7 +17,19 @@ def _split_paragraphs(text: str) -> list[str]:
     return parts or [text.strip()]
 
 
-def _chunk_text(text: str, metadata: dict, target_size: int = 900, overlap: int = 150) -> list[ChunkPayload]:
+def _chunk_text(text: str, metadata: dict, target_size: int = 900, overlap: int = 150, header: str = "") -> list[ChunkPayload]:
+    chunks = _split_into_chunks(text, metadata, target_size=target_size, overlap=overlap)
+    if not header:
+        return chunks
+    # La cabecera (titulo, sistema...) va en cada chunk para que BM25, embeddings y reranker la vean,
+    # igual que un campo `title` buscable en un indice de Azure AI Search.
+    for chunk in chunks:
+        chunk.content = f"{header}\n{chunk.content}"
+        chunk.content_hash = sha256(chunk.content.encode("utf-8")).hexdigest()
+    return chunks
+
+
+def _split_into_chunks(text: str, metadata: dict, *, target_size: int, overlap: int) -> list[ChunkPayload]:
     paragraphs = _split_paragraphs(text)
     chunks: list[ChunkPayload] = []
     buffer = ""
@@ -75,7 +87,17 @@ def build_chunks_for_document(document) -> list[ChunkPayload]:
         "tags": document.tags,
         "source_url": document.source_url,
     }
-    return _chunk_text(document.content, metadata=metadata)
+    header = "\n".join(
+        line
+        for line in [
+            f"Titulo: {document.title}",
+            f"Sistema: {document.affected_system or ''}",
+            f"Tipo: {getattr(document, 'document_type', None) or ''}",
+            f"Departamento: {document.department or ''}",
+        ]
+        if not line.endswith(": ")
+    )
+    return _chunk_text(document.content, metadata=metadata, header=header)
 
 
 def build_chunks_for_incident(incident) -> list[ChunkPayload]:

@@ -32,11 +32,18 @@ class RetrievedChunk:
 
 @dataclass(frozen=True, slots=True)
 class RetrievalConfig:
-    top_k: int = 5
-    vector_weight: float = 0.70
-    text_weight: float = 0.30
-    vector_candidates: int = 15
-    text_candidates: int = 15
+    """Busqueda hibrida al estilo Azure AI Search (BM25 + vector, fusion RRF, reranker semantico).
+
+    vector_weight/text_weight son los pesos de cada lista en la fusion RRF (como el `weight`
+    de las consultas vectoriales de Azure). Por defecto pesan lo mismo.
+    """
+
+    top_k: int = 16
+    vector_weight: float = 0.50
+    text_weight: float = 0.50
+    vector_candidates: int = 50
+    text_candidates: int = 50
+    rrf_k: int = 60
 
     def normalized(self) -> "RetrievalConfig":
         top_k = max(1, int(self.top_k))
@@ -46,8 +53,8 @@ class RetrievalConfig:
         text_weight = max(0.0, float(self.text_weight))
         total_weight = vector_weight + text_weight
         if total_weight <= 0:
-            vector_weight = 0.70
-            text_weight = 0.30
+            vector_weight = 0.50
+            text_weight = 0.50
             total_weight = 1.0
         return RetrievalConfig(
             top_k=top_k,
@@ -55,10 +62,28 @@ class RetrievalConfig:
             text_weight=text_weight / total_weight,
             vector_candidates=vector_candidates,
             text_candidates=text_candidates,
+            rrf_k=max(1, int(self.rrf_k)),
         )
 
 
 DEFAULT_RETRIEVAL_CONFIG = RetrievalConfig()
+
+
+def _source_keys(items: list) -> list[str]:
+    keys: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            key = f"{item['source_type']}:{item['source_id']}"
+        else:
+            key = f"{item.source_type}:{item.source_id}"
+        if key not in keys:
+            keys.append(key)
+    return keys
+
+
+def estimate_tokens(text: str) -> int:
+    """Estimacion conservadora (~3,2 caracteres por token en espanol) sin depender del tokenizer del modelo."""
+    return max(1, int(len(text or "") / 3.2) + 1)
 
 
 def _normalize(scores: list[float]) -> list[float]:
@@ -72,9 +97,20 @@ def _normalize(scores: list[float]) -> list[float]:
 
 
 class HybridRetriever:
+    """Replica el flujo de Azure AI Search con ranker semantico:
+
+    1. BM25 (palabras clave, OR) y busqueda vectorial en paralelo, 50 candidatos cada una.
+    2. Fusion con Reciprocal Rank Fusion (k=60, mismo peso por defecto).
+    3. El reranker reordena los candidatos fusionados (hasta 100 = una "search unit" de Cohere;
+       Azure usa los 50 primeros) y su puntuacion es la que manda.
+    4. Se devuelven los top_k (16) y se recortan los peores hasta caber en el presupuesto de tokens.
+    """
+
     def __init__(self, session: Session, reranker: RerankerProvider | None = None):
+        settings = get_settings()
         self.chunk_repository = ChunkRepository(session)
-        self.reranker_candidates = max(1, int(get_settings().reranker_candidates))
+        self.reranker_candidates = max(1, int(settings.reranker_candidates))
+        self.context_max_tokens = max(1, int(settings.retrieval_context_max_tokens))
         self.reranker = reranker if reranker is not None else build_default_reranker()
 
     def search(
@@ -84,21 +120,25 @@ class HybridRetriever:
         limit: int | None = None,
         config: RetrievalConfig | None = None,
         filters: RetrievalFilters | dict | None = None,
+        keyword_query: str | None = None,
     ) -> list[RetrievedChunk]:
         effective = (config or DEFAULT_RETRIEVAL_CONFIG).normalized()
         if limit is not None:
             effective = replace(effective, top_k=max(1, int(limit))).normalized()
         effective_filters = normalize_retrieval_filters(filters)
+        text_query = (keyword_query or "").strip() or query
 
         with start_span(
             "retrieval.hybrid_search",
             {
                 "query.length": len(query),
+                "retrieval.keyword_query": text_query,
                 "retrieval.top_k": effective.top_k,
                 "retrieval.vector_weight": effective.vector_weight,
                 "retrieval.text_weight": effective.text_weight,
                 "retrieval.vector_candidates": effective.vector_candidates,
                 "retrieval.text_candidates": effective.text_candidates,
+                "retrieval.rrf_k": effective.rrf_k,
                 "retrieval.filters.active": effective_filters.active(),
                 "retrieval.filters": effective_filters.to_dict(),
                 "retrieval.reranker.enabled": bool(self.reranker),
@@ -109,7 +149,7 @@ class HybridRetriever:
                 limit=effective.vector_candidates,
                 filters=effective_filters,
             )
-            text_rows = self.chunk_repository.text_search(query, limit=effective.text_candidates, filters=effective_filters)
+            text_rows = self.chunk_repository.text_search(text_query, limit=effective.text_candidates, filters=effective_filters)
             filter_fallback = False
 
             with start_span(
@@ -123,11 +163,24 @@ class HybridRetriever:
                 if effective_filters.active() and len(ordered) < effective.top_k:
                     filter_fallback = True
                     vector_rows = self.chunk_repository.vector_search(query_embedding, limit=effective.vector_candidates)
-                    text_rows = self.chunk_repository.text_search(query, limit=effective.text_candidates)
+                    text_rows = self.chunk_repository.text_search(text_query, limit=effective.text_candidates)
                     ordered = self._merge_rows(vector_rows, text_rows, effective)
 
-                reranked = self._rerank(query, ordered, effective.top_k)
-                results = (reranked or ordered)[: effective.top_k]
+                reranked = self._rerank(query, ordered)
+                ranked = reranked or ordered
+                results = self._fit_token_budget(ranked[: effective.top_k])
+                self.last_debug = {
+                    "keyword_query": text_query,
+                    "filter_fallback": filter_fallback,
+                    "reranker_applied": bool(reranked),
+                    "returned_chunk_ids": [chunk.chunk_id for chunk in results],
+                    # Fuentes ("tipo:id") en orden por etapa, para ver donde se pierde la fuente buena.
+                    "vector_sources": _source_keys(vector_rows),
+                    "text_sources": _source_keys(text_rows),
+                    "fused_sources": _source_keys(ordered),
+                    "reranked_sources": _source_keys(reranked or []),
+                    "returned_sources": _source_keys(results),
+                }
                 set_span_attributes(
                     merge_span,
                     {
@@ -147,47 +200,54 @@ class HybridRetriever:
             return results
 
     def _merge_rows(self, vector_rows: list[dict], text_rows: list[dict], config: RetrievalConfig) -> list[RetrievedChunk]:
-        merged: dict[int, RetrievedChunk] = {}
-        for row in vector_rows:
-            merged[row["id"]] = RetrievedChunk(
-                chunk_id=row["id"],
-                source_type=row["source_type"],
-                source_id=row["source_id"],
-                content=row["content"],
-                metadata=row["metadata"] or {},
-                vector_score=float(row["score"] or 0.0),
-            )
+        """Reciprocal Rank Fusion, como el modo hibrido de Azure AI Search.
 
-        for row in text_rows:
-            existing = merged.get(row["id"])
-            if existing:
-                existing.text_score = float(row["score"] or 0.0)
-            else:
-                merged[row["id"]] = RetrievedChunk(
+        RRF usa posiciones, no puntuaciones, asi que no hace falta normalizar escalas tan distintas
+        como coseno y BM25. hybrid_score se escala a [0, 1] dividiendo por el maximo posible.
+        """
+        merged: dict[int, RetrievedChunk] = {}
+        fused: dict[int, float] = {}
+
+        def chunk_for(row: dict) -> RetrievedChunk:
+            chunk = merged.get(row["id"])
+            if chunk is None:
+                chunk = RetrievedChunk(
                     chunk_id=row["id"],
                     source_type=row["source_type"],
                     source_id=row["source_id"],
                     content=row["content"],
                     metadata=row["metadata"] or {},
-                    text_score=float(row["score"] or 0.0),
                 )
+                merged[row["id"]] = chunk
+            return chunk
 
-        ordered = list(merged.values())
-        vector_norm = _normalize([chunk.vector_score for chunk in ordered])
-        text_norm = _normalize([chunk.text_score for chunk in ordered])
+        for rank, row in enumerate(vector_rows, start=1):
+            chunk_for(row).vector_score = float(row["score"] or 0.0)
+            fused[row["id"]] = fused.get(row["id"], 0.0) + config.vector_weight / (config.rrf_k + rank)
+        for rank, row in enumerate(text_rows, start=1):
+            chunk_for(row).text_score = float(row["score"] or 0.0)
+            fused[row["id"]] = fused.get(row["id"], 0.0) + config.text_weight / (config.rrf_k + rank)
 
-        for idx, chunk in enumerate(ordered):
-            chunk.hybrid_score = config.vector_weight * vector_norm[idx] + config.text_weight * text_norm[idx]
+        best_possible = (config.vector_weight + config.text_weight) / (config.rrf_k + 1)
+        for chunk_id, chunk in merged.items():
+            chunk.hybrid_score = fused[chunk_id] / best_possible
             chunk.final_score = chunk.hybrid_score
 
-        ordered.sort(key=lambda item: item.final_score, reverse=True)
-        return ordered
+        return sorted(merged.values(), key=lambda item: item.final_score, reverse=True)
 
-    def _rerank(self, query: str, ordered: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk] | None:
+    def _fit_token_budget(self, chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
+        """Quita los peores chunks (los ultimos) hasta que el contexto cabe en el presupuesto."""
+        budget = int(getattr(self, "context_max_tokens", 16000))
+        kept = list(chunks)
+        while len(kept) > 1 and sum(estimate_tokens(chunk.content) for chunk in kept) > budget:
+            kept.pop()
+        return kept
+
+    def _rerank(self, query: str, ordered: list[RetrievedChunk]) -> list[RetrievedChunk] | None:
         if not self.reranker or not ordered:
             return None
 
-        candidate_limit = max(top_k, int(getattr(self, "reranker_candidates", len(ordered))))
+        candidate_limit = max(1, int(getattr(self, "reranker_candidates", len(ordered))))
         candidates = ordered[:candidate_limit]
         documents = [
             {
@@ -208,11 +268,10 @@ class HybridRetriever:
             {
                 "retrieval.reranker.model": getattr(self.reranker, "model", ""),
                 "retrieval.reranker.candidate_count": len(documents),
-                "retrieval.reranker.top_k": top_k,
             },
         ) as span:
             try:
-                results = self.reranker.rerank(query=query, documents=documents, top_n=top_k)
+                results = self.reranker.rerank(query=query, documents=documents, top_n=len(documents))
             except Exception as exc:
                 logger.warning("Reranker unavailable; using hybrid ranking: %s", exc)
                 set_span_attributes(
@@ -224,22 +283,18 @@ class HybridRetriever:
                 )
                 return None
 
+            # Como el ranker semantico de Azure: el orden final lo decide solo el reranker.
             score_by_id = {item.chunk_id: item.score for item in results}
-            rerank_norm = _normalize([score_by_id.get(chunk.chunk_id, 0.0) for chunk in candidates])
-            hybrid_norm = _normalize([chunk.hybrid_score for chunk in candidates])
-            for idx, chunk in enumerate(candidates):
+            for chunk in candidates:
                 chunk.rerank_score = score_by_id.get(chunk.chunk_id, 0.0)
-                chunk.final_score = 0.80 * rerank_norm[idx] + 0.20 * hybrid_norm[idx]
-
-            reranked_candidates = sorted(candidates, key=lambda item: item.final_score, reverse=True)
-            untouched = ordered[candidate_limit:]
-            reranked = reranked_candidates + untouched
+                chunk.final_score = chunk.rerank_score
+            reranked = sorted(candidates, key=lambda item: item.final_score, reverse=True) + ordered[candidate_limit:]
             set_span_attributes(
                 span,
                 {
                     "retrieval.reranker.latency_ms": int((time.perf_counter() - started_at) * 1000),
                     "retrieval.reranker.result_count": len(results),
-                    "retrieval.reranker.chunk_ids": [item.chunk_id for item in reranked[:top_k]],
+                    "retrieval.reranker.chunk_ids": [item.chunk_id for item in reranked[:16]],
                 },
             )
             return reranked

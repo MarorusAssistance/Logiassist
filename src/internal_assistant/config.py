@@ -63,7 +63,8 @@ class Settings(BaseSettings):
     reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="RERANKER_MODEL")
     reranker_api_key: str = Field(default="", alias="RERANKER_API_KEY")
     reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
-    reranker_candidates: int = Field(default=30, alias="RERANKER_CANDIDATES")
+    reranker_candidates: int = Field(default=100, alias="RERANKER_CANDIDATES")
+    retrieval_context_max_tokens: int = Field(default=16000, alias="RETRIEVAL_CONTEXT_MAX_TOKENS")
     eval_max_concurrency: int = Field(default=1, alias="EVAL_MAX_CONCURRENCY")
 
     @property

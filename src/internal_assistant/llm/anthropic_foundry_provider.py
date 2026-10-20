@@ -62,6 +62,7 @@ CHAT_PLAN_SCHEMA: dict[str, Any] = {
         "user_context_summary": {"type": "string"},
         "expected_source_preference": _STRING_LIST,
         "mentioned_systems": _STRING_LIST,
+        "search_keywords": _STRING_LIST,
         "retrieval_filters": {
             "type": "object",
             "properties": {
@@ -98,6 +99,7 @@ CHAT_PLAN_SCHEMA: dict[str, Any] = {
         "user_context_summary",
         "expected_source_preference",
         "mentioned_systems",
+        "search_keywords",
         "retrieval_filters",
         "filter_reason",
         "reason",

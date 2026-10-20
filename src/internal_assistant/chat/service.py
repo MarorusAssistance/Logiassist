@@ -33,6 +33,7 @@ from internal_assistant.repositories import (
     MessageRepository,
     RetrievalLogRepository,
 )
+from internal_assistant.rag.keywords import build_keyword_query
 from internal_assistant.rag import DEFAULT_RETRIEVAL_CONFIG, HybridRetriever, RetrievalConfig, RetrievalFilters
 from internal_assistant.schemas import ChatPlan, ChatRequest, ChatResponse, FeedbackCreate, SourceSnippet
 from internal_assistant.security.prompt_guard import (
@@ -60,6 +61,7 @@ class ChatService:
         self.memories = ConversationMemoryRepository(session)
         self.retriever = HybridRetriever(session)
         self.last_output_findings: list[str] = []
+        self.last_retrieval_debug: dict[str, Any] = {}
         self.last_output_blocked = False
 
     def classify_intent(self, message: str, state: dict | None = None) -> str:
@@ -70,6 +72,7 @@ class ChatService:
         message: str,
         retrieval_config: RetrievalConfig | None = None,
         retrieval_filters: RetrievalFilters | dict | None = None,
+        keyword_query: str | None = None,
     ) -> list:
         query_embedding = self.llm_provider.embed_texts([message])[0]
         return self.retriever.search(
@@ -77,6 +80,7 @@ class ChatService:
             query_embedding,
             config=retrieval_config or DEFAULT_RETRIEVAL_CONFIG,
             filters=retrieval_filters,
+            keyword_query=keyword_query,
         )
 
     def calculate_confidence(self, retrieved: list) -> float:
@@ -238,6 +242,7 @@ class ChatService:
                     trace_run=trace_run,
                 )
             meta = response.pop("_meta", {})
+            meta["retrieval_debug"] = self.last_retrieval_debug
             next_state = response.pop("_state")
             chat_response = ChatResponse(**response)
             trace_run.set_outputs(self._trace_response_payload(chat_response))
@@ -691,11 +696,19 @@ class ChatService:
                     "retrieval.filters.systems": retrieval_filters.affected_systems,
                 },
             ) as retrieve_span:
+                keyword_query = build_keyword_query(plan.search_keywords, knowledge_query, request.message)
                 retrieved = self.retrieve(
                     knowledge_query,
                     retrieval_config=effective_config,
                     retrieval_filters=retrieval_filters,
+                    keyword_query=keyword_query,
                 )
+                self.last_retrieval_debug = {
+                    "knowledge_query": knowledge_query,
+                    "search_keywords": list(plan.search_keywords),
+                    "retrieval_filters": retrieval_filters.to_dict(),
+                    **dict(getattr(self.retriever, "last_debug", {}) or {}),
+                }
                 retrieved, quarantined_chunk_ids = self._quarantine_retrieved(retrieved)
                 confidence = self.calculate_confidence(retrieved)
                 retrieve_attrs = retrieval_span_attributes(retrieved=retrieved, confidence=confidence)

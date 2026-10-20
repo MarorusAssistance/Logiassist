@@ -40,9 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=os.getenv("EVAL_USE_LLM_JUDGE", "false").strip().lower() == "true",
     )
-    parser.add_argument("--top-k", type=int, default=int(os.getenv("EVAL_TOP_K", "5")))
-    parser.add_argument("--vector-weight", type=float, default=float(os.getenv("EVAL_VECTOR_WEIGHT", "0.70")))
-    parser.add_argument("--text-weight", type=float, default=float(os.getenv("EVAL_TEXT_WEIGHT", "0.30")))
+    parser.add_argument("--top-k", type=int, default=int(os.getenv("EVAL_TOP_K", "16")))
+    parser.add_argument("--vector-weight", type=float, default=float(os.getenv("EVAL_VECTOR_WEIGHT", "0.50")))
+    parser.add_argument("--text-weight", type=float, default=float(os.getenv("EVAL_TEXT_WEIGHT", "0.50")))
     parser.add_argument("--max-concurrency", type=int, default=int(os.getenv("EVAL_MAX_CONCURRENCY", "1")))
     return parser
 

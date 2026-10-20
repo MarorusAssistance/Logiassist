@@ -41,7 +41,7 @@ class FakeEvalService:
     def __init__(self, session, llm_provider=None):
         self.session = session
 
-    def retrieve(self, message, retrieval_config=None):
+    def retrieve(self, message, retrieval_config=None, keyword_query=None):
         return [
             RetrievedChunk(
                 chunk_id=1,
@@ -86,7 +86,7 @@ class FakeMultiTurnService:
     def __init__(self, session, llm_provider=None):
         self.session = session
 
-    def retrieve(self, message, retrieval_config=None):
+    def retrieve(self, message, retrieval_config=None, keyword_query=None):
         return []
 
     def simulate_chat(self, request, *, state=None, retrieval_config=None):
