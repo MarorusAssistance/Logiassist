@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -11,6 +12,27 @@ from internal_assistant.observability.usage import record_usage
 
 
 logger = logging.getLogger(__name__)
+
+RETRYABLE_STATUS = {429, 503}
+MAX_RERANK_ATTEMPTS = 6
+
+
+def _retry_delay(response: httpx.Response, attempt: int) -> float:
+    retry_after = response.headers.get("retry-after")
+    try:
+        return min(60.0, max(1.0, float(retry_after)))
+    except (TypeError, ValueError):
+        return min(60.0, 2.0 * (2**attempt))
+
+
+def _post_with_retry(url: str, **kwargs) -> httpx.Response:
+    """Reintenta 429/503 (cuotas por minuto pequenas en Foundry) respetando Retry-After."""
+    for attempt in range(MAX_RERANK_ATTEMPTS):
+        response = httpx.post(url, **kwargs)
+        if response.status_code not in RETRYABLE_STATUS or attempt == MAX_RERANK_ATTEMPTS - 1:
+            return response
+        time.sleep(_retry_delay(response, attempt))
+    return response
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +57,7 @@ class HttpRerankerProvider:
         self.timeout_seconds = timeout_seconds
 
     def rerank(self, *, query: str, documents: list[dict], top_n: int) -> list[RerankResult]:
-        response = httpx.post(
+        response = _post_with_retry(
             f"{self.base_url}/rerank",
             json={"query": query, "documents": documents, "top_n": top_n},
             timeout=self.timeout_seconds,
@@ -89,7 +111,7 @@ class CohereAzureRerankerProvider:
                 )
             )
 
-        response = httpx.post(
+        response = _post_with_retry(
             self.endpoint_url,
             json={
                 "model": self.model,
@@ -104,7 +126,7 @@ class CohereAzureRerankerProvider:
             timeout=self.timeout_seconds,
         )
         if response.status_code in {401, 403}:
-            response = httpx.post(
+            response = _post_with_retry(
                 self.endpoint_url,
                 json={
                     "model": self.model,

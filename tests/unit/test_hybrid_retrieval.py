@@ -197,3 +197,23 @@ def test_cohere_azure_reranker_accepts_full_rerank_path():
     )
 
     assert provider.endpoint_url == "https://example.services.ai.azure.com/models/providers/cohere/v2/rerank"
+
+
+def test_reranker_post_retries_on_429(monkeypatch):
+    import httpx
+
+    from internal_assistant.rag import reranking
+
+    request = httpx.Request("POST", "https://x/rerank")
+    responses = [
+        httpx.Response(429, request=request, headers={"retry-after": "1"}),
+        httpx.Response(200, request=request, json={"results": []}),
+    ]
+    sleeps: list[float] = []
+    monkeypatch.setattr(reranking.httpx, "post", lambda url, **kwargs: responses.pop(0))
+    monkeypatch.setattr(reranking.time, "sleep", sleeps.append)
+
+    response = reranking._post_with_retry("https://x/rerank", json={})
+
+    assert response.status_code == 200
+    assert sleeps == [1.0]
