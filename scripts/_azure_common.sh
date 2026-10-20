@@ -8,6 +8,15 @@ DEPLOYMENT_NAME_OVERRIDE="${DEPLOYMENT_NAME:-}"
 DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-${PROJECT_NAME:-internal-assistant}-${ENVIRONMENT_NAME:-demo}-infra}"
 declare -a PYTHON_CMD=()
 
+# uv instalado como binario (macOS/Linux) o como modulo de Python (Windows).
+uv_cmd() {
+  if command -v uv >/dev/null 2>&1; then
+    uv "$@"
+  else
+    "${PYTHON_CMD[@]}" -m uv "$@"
+  fi
+}
+
 fail() {
   echo "ERROR: $*" >&2
   exit 1
