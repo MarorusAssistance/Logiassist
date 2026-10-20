@@ -19,8 +19,6 @@ def _settings(tmp_path, **overrides):
         trace_store_container="",
         trace_store_account_url="",
         trace_store_connection_string="",
-        trace_client="cliente",
-        trace_project="proyecto",
         app_name="app",
     )
     values.update(overrides)
@@ -33,7 +31,7 @@ def _written(tmp_path) -> tuple[str, dict]:
     return str(files[0].relative_to(tmp_path)), json.loads(files[0].read_text(encoding="utf-8"))
 
 
-def test_request_trace_is_stored_per_client_project_conversation_and_request(tmp_path, monkeypatch):
+def test_request_trace_is_stored_per_conversation_and_request(tmp_path, monkeypatch):
     monkeypatch.setattr("internal_assistant.observability.tracing.store_trace", lambda d, p, s: s.write(p, d))
     trace = RagTrace(settings=_settings(tmp_path))
 
@@ -47,7 +45,7 @@ def test_request_trace_is_stored_per_client_project_conversation_and_request(tmp
         root.set_outputs({"answer": "respuesta"})
 
     path, document = _written(tmp_path)
-    assert path.startswith("cliente/proyecto/conversation-42/")
+    assert path.startswith("conversation-42/")
     assert path.endswith(f"_{root.request_id}.json")
     assert document["request_id"] == root.request_id
     assert document["inputs"]["question"] == "Como pido acceso en SafeGate?"
@@ -66,7 +64,7 @@ def test_simulation_traces_are_grouped_under_eval(tmp_path, monkeypatch):
         pass
 
     path, _ = _written(tmp_path)
-    assert path.startswith("cliente/proyecto/eval/eval-037/")
+    assert path.startswith("eval/eval-037/")
 
 
 def test_trace_store_disabled_writes_nothing_and_events_are_noop(tmp_path):

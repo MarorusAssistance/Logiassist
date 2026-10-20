@@ -7,7 +7,7 @@ con su salida cruda y el uso de tokens.
 
 Cada peticion genera un documento en:
 
-    {cliente}/{proyecto}/{conversacion}/{AAAAMMDDTHHMMSS}_{request_id}.json
+    conversation-{id}/{AAAAMMDDTHHMMSS}_{request_id}.json   (la eval, en eval/{escenario}/...)
 
 - TRACE_STORE=local      -> carpeta TRACE_STORE_DIR (por defecto `traces/`, ignorada por git).
 - TRACE_STORE=azure_blob -> contenedor TRACE_STORE_CONTAINER de la cuenta TRACE_STORE_ACCOUNT_URL
@@ -206,18 +206,15 @@ def build_trace_sink(settings=None) -> TraceSink | None:
 
 
 def trace_path(settings, recorder: TraceRecorder) -> str:
-    current = settings or get_settings()
+    """`conversation-{id}/{fecha}_{request_id}.json`; las ejecuciones de la eval van aparte, bajo `eval/`."""
     metadata = recorder.metadata
-    client = _segment(getattr(current, "trace_client", ""), "default-client")
-    project = _segment(getattr(current, "trace_project", "") or getattr(current, "app_name", ""), "default-project")
     conversation_id = metadata.get("conversation_id")
-    if metadata.get("mode") == "simulation":
-        conversation = _segment(metadata.get("eval_scenario_id") or f"simulation-{conversation_id or 0}", "simulation")
-        project = f"{project}/eval"
-    else:
-        conversation = _segment(f"conversation-{conversation_id}" if conversation_id else "", "no-conversation")
     stamp = recorder.started_at.strftime("%Y%m%dT%H%M%S")
-    return f"{client}/{project}/{conversation}/{stamp}_{recorder.request_id}.json"
+    if metadata.get("mode") == "simulation":
+        scenario = _segment(metadata.get("eval_scenario_id") or f"simulation-{conversation_id or 0}", "simulation")
+        return f"eval/{scenario}/{stamp}_{recorder.request_id}.json"
+    conversation = _segment(f"conversation-{conversation_id}" if conversation_id else "", "no-conversation")
+    return f"{conversation}/{stamp}_{recorder.request_id}.json"
 
 
 def store_trace(document: dict[str, Any], path: str, sink: TraceSink, *, wait: bool = False) -> None:

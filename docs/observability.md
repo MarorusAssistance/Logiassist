@@ -7,8 +7,8 @@ guarda ademas un JSON completo en un storage.
 ## Donde se guardan
 
 ```
-{TRACE_CLIENT}/{TRACE_PROJECT}/{conversacion}/{AAAAMMDDTHHMMSS}_{request_id}.json
-{TRACE_CLIENT}/{TRACE_PROJECT}/eval/{escenario}/{AAAAMMDDTHHMMSS}_{request_id}.json   # ejecuciones de la eval
+conversation-{id}/{AAAAMMDDTHHMMSS}_{request_id}.json
+eval/{escenario}/{AAAAMMDDTHHMMSS}_{request_id}.json   # ejecuciones de la eval
 ```
 
 | `TRACE_STORE` | Destino |
@@ -31,7 +31,7 @@ El `request_id` vuelve en la respuesta de `/api/chat` y `/api/chat/stream`, y es
   `rag.format_response` (comportamiento final y politica aplicada, p. ej. `low_retrieval_confidence`).
 - `events`:
   - `input_guard`: riesgo y categorias del guardia de entrada.
-  - `llm.call`: prompt completo y salida cruda del modelo (planner y respuesta), tokens y latencia.
+  - `llm.call`: entrada completa enviada al modelo (todos los mensajes: system, contexto, pregunta) y su salida cruda (planner y respuesta), tokens y latencia.
   - `retrieval.bm25`: lexemas, frecuencia documental, candidatos y puntuacion BM25 de cada uno.
   - `retrieval.hybrid_search`: configuracion, filtros (y el intento filtrado si hubo fallback) y las etapas
     `vector`, `bm25`, `fused` (RRF con la posicion en cada lista), `reranked` (puntuacion y posicion previa),
