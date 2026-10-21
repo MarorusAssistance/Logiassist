@@ -553,7 +553,15 @@ async function requestStream(path, payload, handlers) {
   });
   if (!response.ok || !response.body) {
     const text = await response.text();
-    throw new Error(text || `${response.status} ${response.statusText}`);
+    let detail = text;
+    try {
+      detail = JSON.parse(text).detail || text;
+    } catch {
+      // Respuesta no JSON.
+    }
+    const error = new Error(detail || `${response.status} ${response.statusText}`);
+    error.status = response.status;
+    throw error;
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -634,7 +642,12 @@ async function sendMessage(message) {
       if (following) revealAnswer(parts.item);
     }
   } catch (error) {
-    if (!received) {
+    if (error.status === 429) {
+      // Límite de uso: no se reintenta por la otra ruta, se explica y ya.
+      parts.item.remove();
+      appendErrorMessage(error.message);
+      stopPendingStatus();
+    } else if (!received) {
       try {
         const response = await requestJson("/chat", { method: "POST", body: JSON.stringify(payload) });
         applyChatResponse(response, parts);

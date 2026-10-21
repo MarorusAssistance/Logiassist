@@ -6,6 +6,7 @@ from .feedback import Feedback
 from .incident import Incident
 from .message import Message
 from .retrieval_log import RetrievalLog
+from .usage_event import UsageEvent
 
 __all__ = [
     "Chunk",
@@ -16,4 +17,5 @@ __all__ = [
     "Incident",
     "Message",
     "RetrievalLog",
+    "UsageEvent",
 ]

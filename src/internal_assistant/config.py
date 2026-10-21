@@ -72,6 +72,14 @@ class Settings(BaseSettings):
     reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
     reranker_candidates: int = Field(default=100, alias="RERANKER_CANDIDATES")
     retrieval_context_max_tokens: int = Field(default=16000, alias="RETRIEVAL_CONTEXT_MAX_TOKENS")
+    # Limites de uso de la demo (cuentan peticiones de chat ya atendidas).
+    usage_limits_enabled: bool = Field(default=True, alias="USAGE_LIMITS_ENABLED")
+    usage_client_burst_requests: int = Field(default=10, alias="USAGE_CLIENT_BURST_REQUESTS")
+    usage_client_burst_window_seconds: int = Field(default=300, alias="USAGE_CLIENT_BURST_WINDOW_SECONDS")
+    usage_client_daily_requests: int = Field(default=40, alias="USAGE_CLIENT_DAILY_REQUESTS")
+    usage_global_daily_requests: int = Field(default=150, alias="USAGE_GLOBAL_DAILY_REQUESTS")
+    usage_global_daily_tokens: int = Field(default=1_500_000, alias="USAGE_GLOBAL_DAILY_TOKENS")
+    usage_global_monthly_requests: int = Field(default=1500, alias="USAGE_GLOBAL_MONTHLY_REQUESTS")
     eval_max_concurrency: int = Field(default=1, alias="EVAL_MAX_CONCURRENCY")
 
     @property
