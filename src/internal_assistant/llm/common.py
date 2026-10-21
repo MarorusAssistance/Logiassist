@@ -45,6 +45,12 @@ def build_chat_messages(
         )
         for item in conversation_memory
     )
+    recent_context = "\n".join(
+        wrap_untrusted(str(item.get("content", "")), nonce=nonce, kind="mensaje_previo", role=item.get("role"))
+        for item in conversation_state.get("_recent_messages") or []
+    )
+    # Las claves con "_" son contexto del turno que ya va en su propio bloque: no se repiten en el estado.
+    public_state = {key: value for key, value in conversation_state.items() if not str(key).startswith("_")}
     return [
         {"role": "system", "content": render_system_prompt(SYSTEM_PROMPT)},
         {
@@ -52,7 +58,7 @@ def build_chat_messages(
             "content": (
                 "Devuelve un JSON con: answer, needs_clarification, clarification_question, "
                 "should_offer_incident, used_chunk_ids.\n"
-                f"Estado conversacional: {json.dumps(conversation_state, ensure_ascii=False)}\n"
+                f"Estado conversacional: {json.dumps(public_state, ensure_ascii=False)}\n"
                 f"Politica de evidencia del turno: {json.dumps(evidence_policy, ensure_ascii=False)}\n"
                 f"Plan del turno: {json.dumps(planner_output, ensure_ascii=False)}\n"
                 f"Estado de datasources consultados: {json.dumps(datasource_status, ensure_ascii=False)}\n"
@@ -66,6 +72,7 @@ def build_chat_messages(
                 "usa esa memoria para entender a que respuesta anterior se refiere el usuario.\n"
                 "Si ademas hay documentos directos en el indice de conocimiento, responde con una version mas concreta; "
                 "no pidas aclaracion solo porque el mensaje actual no repita todos los detalles.\n"
+                f"Conversacion reciente (ultimos turnos, del mas antiguo al mas nuevo):\n{recent_context or '[primer turno de la conversacion]'}\n"
                 f"Memoria conversacional recuperada:\n{memory_context or '[sin memoria consultada o sin resultados]'}\n"
                 f"Pregunta del usuario:\n{wrap_untrusted(question, nonce=nonce, kind='pregunta_usuario')}\n"
                 f"Contexto del indice de conocimiento:\n{context or '[indice no consultado o sin resultados]'}"

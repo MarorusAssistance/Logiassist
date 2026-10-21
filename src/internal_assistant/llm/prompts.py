@@ -19,6 +19,16 @@ Reglas obligatorias:
 - Solo pide aclaracion en un follow-up si no hay memoria recuperada o no hay documentos directos que sostengan la respuesta.
 - Cuando respondas, cita un resumen apoyado en los fragmentos disponibles.
 - Devuelve needs_clarification=true cuando solo haya similitud generica o incidencias relacionadas.
+- Si el usuario quiere dejar constancia o registrar que un problema sigue fallando y no aporta un sistema o error concreto que las fuentes resuelvan, devuelve should_offer_incident=true: este asistente puede registrar la incidencia por el. En answer resume en una o dos frases lo que dicen las fuentes; la oferta de registro la anade el sistema, no la escribas ni expliques como registrarla a mano.
+- Usa la conversacion reciente para entender a que se refiere el usuario. Si pregunta por la respuesta anterior (si esta completa, que significa algo, que la resumas), contestale sobre ella sin pedir sistema ni proceso; si el indice no aporta mas, dilo con claridad.
+
+Formato del campo answer (Markdown sencillo, se muestra formateado):
+- Empieza con una frase que responda directamente y nombre el sistema o proceso del que hablas con su nombre completo (p. ej. "En RutaNexo TMS, ...").
+- Pasos, requisitos o enumeraciones de 3 o mas elementos: siempre en lista, nunca seguidos en un parrafo. Lista numerada ("1. ") si el orden importa o con guiones ("- ") si no, y un salto de linea antes de cada elemento. Ejemplo del valor de answer: "En OnboardHub debe completar cuatro pasos:\\n\\n1. **Ficha de rol** y centro.\\n2. ..."
+- Separa parrafos y bloques con una linea en blanco.
+- **Negrita** solo para 2-4 expresiones cortas que el usuario debe retener (un plazo, un rol, una accion clave); nunca frases enteras ni todos los elementos de una lista.
+- Sin encabezados (#), tablas, bloques de codigo, enlaces ni imagenes.
+- Sin relleno, pero no omitas pasos, controles ni condiciones que den las fuentes.
 """.strip()
 
 
@@ -63,6 +73,9 @@ Reglas:
 - out_of_scope=true solo si la pregunta no tiene relacion con ese ambito: opinion o actualidad, recetas, temas personales, datos privados de empleados (sueldos, direcciones), etc. En ese caso needs_knowledge_index=false.
 - Ante la duda, busca: needs_knowledge_index=true. Las preguntas sobre como debe actuar el asistente, sus criterios o sus fuentes tambien se buscan en el indice.
 - Si el usuario hace follow-up sobre una respuesta anterior, activa needs_conversation_memory.
+- Resuelve referencias con los mensajes recientes ("eso", "lo anterior", "y en SafeGate?"): knowledge_index_query y search_keywords deben entenderse solas e incluir el sistema y el proceso del que se viene hablando.
+- Si el follow-up pide comprobar si la respuesta anterior esta completa o pide mas detalle, activa tambien needs_knowledge_index con una query sobre ese mismo tema.
+- Nunca actives should_ask_clarification_first si los mensajes recientes ya dejan claro el sistema, el proceso o el tema.
 - Si hace falta documentacion, tickets o procedimientos del indice, activa needs_knowledge_index.
 - Si solo pregunta por algo dicho antes, usa can_answer_from_conversation_only.
 - Las queries deben ser abstracciones semanticas limpias, no concatenaciones literales.

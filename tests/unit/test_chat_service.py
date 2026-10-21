@@ -244,6 +244,24 @@ def test_chat_response_with_sources_uses_retrieved_chunks(monkeypatch):
     assert service.retrieval_logs.items[-1]["was_answered"] is True
 
 
+def test_llm_incident_offer_is_kept_and_enables_registration_on_next_turn(monkeypatch):
+    monkeypatch.setattr("internal_assistant.chat.service.get_settings", lambda: SimpleNamespace(retrieval_confidence_threshold=0.10, app_shared_secret="secret", custom_incidents_api_base_url="http://test", indexer_api_base_url="http://test"))
+    results = [
+        retrieved_chunk(chunk_id=1, source_type="document", source_id=100, content="Registrar sintoma y mantener abierta la incidencia en HelpOps.", system="HelpOps")
+    ]
+    provider = StaticDecisionProvider(
+        AssistantDecision(answer="Las fuentes piden dejarla abierta con el sintoma.", should_offer_incident=True, used_chunk_ids=[1])
+    )
+    service = build_service(results, llm_provider=provider)
+
+    response = service.handle_chat(ChatRequest(user_id="u1", message="Necesito dejar constancia de que sigue fallando."))
+
+    assert response.should_offer_incident is True
+    assert response.behavior == "abstain_and_offer_incident_registration"
+    assert "responde **si**" in response.answer
+    assert service.conversations.conversations[response.conversation_id].state["offer_incident"] is True
+
+
 def test_chat_stream_callback_receives_answer_tokens(monkeypatch):
     monkeypatch.setattr("internal_assistant.chat.service.get_settings", lambda: SimpleNamespace(retrieval_confidence_threshold=0.10, app_shared_secret="secret", custom_incidents_api_base_url="http://test", indexer_api_base_url="http://test"))
     provider = StaticDecisionProvider(
@@ -703,6 +721,61 @@ def test_planner_memory_only_skips_chunk_retrieval(monkeypatch):
     assert service.memories.search_calls
     assert provider.last_context_chunks == []
     assert provider.last_conversation_state["_conversation_memory"]
+
+
+def _followup_plan():
+    return ChatPlan(
+        intent="followup",
+        needs_conversation_memory=True,
+        needs_knowledge_index=False,
+        can_answer_from_conversation_only=True,
+        should_ask_clarification_first=False,
+        conversation_memory_query="respuesta anterior",
+        knowledge_index_query="",
+        user_context_summary="",
+        expected_source_preference=[],
+        mentioned_systems=[],
+        reason="followup",
+    )
+
+
+def _seed_previous_turn(service, conversation_id, *, attempts):
+    conversation = service.conversations.get_or_create(conversation_id, "u1", "web-demo")
+    conversation.state = {"clarification_attempts": attempts}
+    service.messages.create(conversation_id, "user", "Que pasos sigue un coordinador nuevo en OnboardHub?")
+    service.messages.create(conversation_id, "assistant", "1. Ficha de rol\n2. Mentor\n3. Permisos")
+
+
+def test_followup_after_answer_uses_recent_turns_without_memory_hits(monkeypatch):
+    monkeypatch.setattr("internal_assistant.chat.service.get_settings", lambda: SimpleNamespace(retrieval_confidence_threshold=0.5, app_shared_secret="secret", custom_incidents_api_base_url="http://test", indexer_api_base_url="http://test"))
+    provider = StaticDecisionProvider(
+        AssistantDecision(answer="Si, con esos pasos lo tienes todo.", needs_clarification=False, used_chunk_ids=[]),
+        plan=_followup_plan(),
+    )
+    service = build_service([], llm_provider=provider)
+    _seed_previous_turn(service, 7, attempts=0)
+
+    response = service.handle_chat(ChatRequest(conversation_id=7, user_id="u1", message="y con eso lo tengo todo?"))
+
+    assert response.needs_clarification is False
+    assert response.answer.startswith("Si, con esos pasos")
+    history = provider.last_conversation_state["_recent_messages"]
+    assert [item["role"] for item in history] == ["user", "assistant"]
+
+
+def test_followup_after_clarifications_still_goes_through_confidence_gate(monkeypatch):
+    monkeypatch.setattr("internal_assistant.chat.service.get_settings", lambda: SimpleNamespace(retrieval_confidence_threshold=0.5, app_shared_secret="secret", custom_incidents_api_base_url="http://test", indexer_api_base_url="http://test"))
+    provider = StaticDecisionProvider(
+        AssistantDecision(answer="no deberia llegar aqui", needs_clarification=False, used_chunk_ids=[]),
+        plan=_followup_plan(),
+    )
+    service = build_service([], llm_provider=provider)
+    _seed_previous_turn(service, 8, attempts=2)
+
+    response = service.handle_chat(ChatRequest(conversation_id=8, user_id="u1", message="No tengo mas detalle, sigue fallando."))
+
+    assert response.should_offer_incident is True
+    assert provider.calls == 0
 
 
 def test_planner_index_only_skips_memory_search(monkeypatch):

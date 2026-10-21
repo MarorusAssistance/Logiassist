@@ -28,7 +28,7 @@ Papel cálido y carbón, una sola tinta granate, serif fina para nombres y títu
 
 - **Instrument Serif** (400): nombre del producto, título del estado vacío, cabeceras de bloque ("Fuentes", "Sistemas"). `line-height` 0.9–1, `letter-spacing: -0.02em`.
 - **Hanken Grotesk** (300–600, base 350): mensajes, botones, inputs, etiquetas.
-- **Monoespaciada**: solo para identificadores reales (la referencia de traza de cada respuesta).
+- **Monoespaciada**: solo para identificadores reales; la interfaz del chat no muestra ninguno.
 - Sin etiquetas en mayúsculas encima de los títulos. Ancho de lectura máximo 68ch. Cifras con `tabular-nums`.
 
 ## Forma
