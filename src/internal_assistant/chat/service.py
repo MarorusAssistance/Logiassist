@@ -49,6 +49,9 @@ from internal_assistant.security.prompt_guard import (
 logger = get_logger(__name__)
 
 _EXCERPT_HEADER_LINE = re.compile(r"^(Titulo|Sistema|Tipo|Departamento):.*$", re.MULTILINE)
+INCIDENT_OFFER_PROMPT = "Si quieres, registro la incidencia por ti: responde **si** y te pido los datos."
+# Turnos previos (usuario + asistente) que ve el modelo al redactar, para resolver follow-ups.
+GENERATION_HISTORY_MESSAGES = 4
 _EXCERPT_LABEL = re.compile(r"^(Descripcion|Resolucion|Contenido):\s*", re.MULTILINE)
 
 
@@ -109,6 +112,7 @@ class ChatService:
         planner_output: dict[str, Any] | None = None,
         conversation_memory: list[dict[str, Any]] | None = None,
         datasource_status: dict[str, Any] | None = None,
+        recent_messages: list[dict[str, Any]] | None = None,
     ) -> tuple[Any, list[dict[str, Any]]]:
         context_chunks = [
             {
@@ -129,6 +133,8 @@ class ChatService:
             llm_state["_conversation_memory"] = conversation_memory
         if datasource_status:
             llm_state["_datasource_status"] = datasource_status
+        if recent_messages:
+            llm_state["_recent_messages"] = recent_messages
         decision = self.llm_provider.generate_chat_response(
             question=question,
             context_chunks=context_chunks,
@@ -147,6 +153,7 @@ class ChatService:
         planner_output: dict[str, Any] | None = None,
         conversation_memory: list[dict[str, Any]] | None = None,
         datasource_status: dict[str, Any] | None = None,
+        recent_messages: list[dict[str, Any]] | None = None,
     ) -> tuple[Any, list[dict[str, Any]]]:
         context_chunks = [
             {
@@ -167,6 +174,8 @@ class ChatService:
             llm_state["_conversation_memory"] = conversation_memory
         if datasource_status:
             llm_state["_datasource_status"] = datasource_status
+        if recent_messages:
+            llm_state["_recent_messages"] = recent_messages
 
         final_decision = None
         guarded_on_token = StreamingOutputGuard(on_token)
@@ -807,7 +816,10 @@ class ChatService:
                     "signals.status_request": query_signals.status_request,
                 },
             )
-        low_confidence = (not memory_results) and (
+        # Un follow-up sobre una respuesta anterior se contesta con los turnos recientes aunque no haya
+        # fragmentos. Si lo anterior fueron aclaraciones (intentos > 0) no hay respuesta que retomar.
+        conversation_context = bool(plan.needs_conversation_memory and recent_messages and clarification_attempts == 0)
+        low_confidence = (not memory_results and not conversation_context) and (
             not retrieved or confidence < self.settings.retrieval_confidence_threshold
         )
         record_trace_event(
@@ -816,6 +828,8 @@ class ChatService:
                 "confidence": confidence,
                 "confidence_threshold": self.settings.retrieval_confidence_threshold,
                 "memory_result_count": len(memory_results),
+                "recent_message_count": len(recent_messages),
+                "conversation_context": conversation_context,
                 "retrieved_count": len(retrieved),
                 "low_confidence_gate": low_confidence,
                 "pre_gate_answer": bool(plan.needs_knowledge_index and self._should_pre_gate_answer(evidence_assessment)),
@@ -1063,6 +1077,9 @@ class ChatService:
             }
 
         sources = self._build_visible_sources(retrieved)
+        generation_history = [
+            {"role": item["role"], "content": item["content"]} for item in recent_messages[-GENERATION_HISTORY_MESSAGES:]
+        ]
         trace_context_chunks = [
             {
                 "chunk_id": item.chunk_id,
@@ -1081,6 +1098,7 @@ class ChatService:
                 "_planner_output": planner_payload,
                 "_conversation_memory": memory_payload if plan.needs_conversation_memory else None,
                 "_datasource_status": datasource_status,
+                "_recent_messages": generation_history,
                 "_evidence_policy": {
                     "query_signals": query_signals.to_dict(),
                     "evidence_assessment": evidence_assessment.to_dict(),
@@ -1123,6 +1141,7 @@ class ChatService:
                     planner_output=planner_payload,
                     conversation_memory=memory_payload if plan.needs_conversation_memory else None,
                     datasource_status=datasource_status,
+                    recent_messages=generation_history,
                 )
             else:
                 decision, context_chunks = self.generate_answer(
@@ -1133,6 +1152,7 @@ class ChatService:
                     planner_output=planner_payload,
                     conversation_memory=memory_payload if plan.needs_conversation_memory else None,
                     datasource_status=datasource_status,
+                    recent_messages=generation_history,
                 )
             answer_run.set_outputs(
                 {
@@ -1340,7 +1360,12 @@ class ChatService:
             if self.last_output_blocked
             else self._actual_behavior_for_answer(evidence_assessment, decision)
         )
-        should_offer_incident = False
+        # El modelo puede pedir ofrecer el registro (p. ej. "quiero dejar constancia de que sigue fallando"):
+        # se deja la oferta en el estado para que un "si" en el siguiente turno abra el flujo de incidencia.
+        should_offer_incident = bool(getattr(decision, "should_offer_incident", False)) and not self.last_output_blocked
+        if should_offer_incident:
+            state["offer_incident"] = True
+            actual_behavior = "abstain_and_offer_incident_registration"
         related_incidents = [
             {
                 "id": incident.id,
@@ -1351,6 +1376,8 @@ class ChatService:
             for incident in related_incident_objects
         ]
         answer = self._format_answer_for_demo(decision.answer, related_incidents=related_incidents)
+        if should_offer_incident:
+            answer = f"{answer}\n\n{INCIDENT_OFFER_PROMPT}"
         self._trace_formatted_response(
             trace_run,
             answer=answer,

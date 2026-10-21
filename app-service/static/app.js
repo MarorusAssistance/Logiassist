@@ -261,7 +261,7 @@ class SmoothText {
     if (backlog > 0) {
       const step = this.reduceMotion ? backlog : Math.max(1, Math.ceil(backlog / 12));
       this.shown = Math.min(this.target.length, this.shown + step);
-      renderAnswerBody(this.body, this.target.slice(0, this.shown), this.turn, 0);
+      renderAnswerBody(this.body, closeOpenMarkup(this.target.slice(0, this.shown)), this.turn, 0);
       const caret = el("span", "stream-caret");
       caret.setAttribute("aria-hidden", "true");
       let tail = this.body.lastElementChild || this.body;
@@ -335,7 +335,15 @@ function appendInline(parent, text, turn, sourceCount) {
   parent.append(document.createTextNode(text.slice(last)));
 }
 
-/* Markdown mínimo que devuelve el modelo: párrafos, listas con "-" o "1." y negritas. */
+/* Durante el streaming una negrita puede llegar a medias ("**Safe"): se cierra provisionalmente
+   para que se vea ya en negrita en vez de mostrar los asteriscos. */
+function closeOpenMarkup(text) {
+  const marks = text.match(/\*\*/g);
+  if (marks && marks.length % 2 === 1) return text.endsWith("**") ? text.slice(0, -2) : `${text}**`;
+  return text;
+}
+
+/* Markdown mínimo que devuelve el modelo: párrafos, títulos cortos, listas con "-" o "1." y negritas. */
 function renderAnswerBody(body, text, turn, sourceCount) {
   body.replaceChildren();
   const lines = String(text || "").trim().split("\n");
@@ -349,8 +357,14 @@ function renderAnswerBody(body, text, turn, sourceCount) {
     const line = raw.trimEnd();
     const bullet = line.match(/^\s*[-•*]\s+(.*)$/);
     const numbered = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    const heading = line.match(/^\s*#{1,6}\s+(.*)$/);
     if (!line.trim()) {
       closeBlocks();
+    } else if (heading) {
+      closeBlocks();
+      const title = el("p", "msg__heading");
+      appendInline(title, heading[1].replace(/\*\*/g, ""), turn, sourceCount);
+      body.append(title);
     } else if (bullet || numbered) {
       const tag = bullet ? "ul" : "ol";
       if (!list || list.tagName.toLowerCase() !== tag) {
@@ -387,6 +401,7 @@ function evidenceFor(response, usedCount) {
     return { kind: "weak", text: "Fuera del ámbito de la demo" };
   }
   if (behavior === "abstain_and_offer_incident_registration") {
+    if (sourceCount > 0) return { kind: "weak", text: "Sin solución en las fuentes · puedo registrar la incidencia" };
     return { kind: "none", text: "Sin evidencia en la documentación ni en las incidencias" };
   }
   if (behavior === "ask_clarification" || response.needs_clarification) {
@@ -503,11 +518,6 @@ function buildFeedback(response) {
     useful.addEventListener("click", () => sendFeedback(response, "useful").then(done, (error) => done(error.message)));
     notUseful.addEventListener("click", () => sendFeedback(response, "not_useful").then(done, (error) => done(error.message)));
     foot.append(label, useful, notUseful);
-  }
-  if (response.request_id) {
-    const ref = el("span", "msg__ref mono", `ref ${response.request_id.slice(0, 8)}`);
-    ref.title = `Identificador de la traza: ${response.request_id}`;
-    foot.append(ref);
   }
   return foot;
 }
