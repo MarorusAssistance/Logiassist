@@ -333,3 +333,49 @@ def test_voyage_reranker_uses_generic_reranker_settings(monkeypatch):
     provider = reranking.build_default_reranker()
     assert isinstance(provider, reranking.VoyageRerankerProvider)
     assert provider.model == "rerank-3" and provider.endpoint_url == "https://eu.ai.mongodb.com/v1/rerank"
+
+
+def test_only_hard_filters_reach_the_repository():
+    retriever = HybridRetriever.__new__(HybridRetriever)
+    retriever.chunk_repository = StubChunkRepository()
+    retriever.reranker = None
+    planner_filters = RetrievalFilters(
+        source_types=["document"], affected_systems=["SafeGate"], document_types=["procedimiento"], departments=["Seguridad"]
+    )
+
+    retriever.search("consulta", [0.1] * 512, limit=2, filters=planner_filters)
+
+    applied = retriever.chunk_repository.vector_filters[0]
+    assert applied.source_types == ["document"] and applied.affected_systems == ["SafeGate"]
+    assert applied.document_types == [] and applied.departments == []
+
+
+class LowScoreFilteredRepository(StubChunkRepository):
+    def vector_search(self, embedding, limit=15, filters=None):
+        self.vector_filters.append(filters)
+        if filters and filters.active():
+            return [{"id": 1, "source_type": "document", "source_id": 10, "content": "x", "metadata": {}, "score": 0.5}]
+        return [{"id": 3, "source_type": "document", "source_id": 30, "content": "y", "metadata": {}, "score": 0.9}]
+
+    def text_search(self, query, limit=15, filters=None):
+        return []
+
+
+class ScoreByIdReranker:
+    model = "fake"
+
+    def rerank(self, *, query, documents, top_n):
+        scores = {1: 0.2, 3: 0.9}
+        return [type("R", (), {"chunk_id": d["id"], "score": scores.get(d["id"], 0.0)})() for d in documents]
+
+
+def test_weak_filtered_results_retry_without_filters():
+    retriever = HybridRetriever.__new__(HybridRetriever)
+    retriever.chunk_repository = LowScoreFilteredRepository()
+    retriever.reranker = ScoreByIdReranker()
+    retriever.reranker_candidates = 100
+    retriever.confidence_threshold = 0.5
+
+    results = retriever.search("consulta", [0.1] * 512, limit=1, filters=RetrievalFilters(source_types=["document"]))
+
+    assert [item.chunk_id for item in results] == [3]

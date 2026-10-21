@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     microsoft_app_tenant_id: str = Field(default="", alias="MICROSOFT_APP_TENANT_ID")
     teams_app_id: str = Field(default="", alias="TEAMS_APP_ID")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
-    retrieval_confidence_threshold: float = Field(default=0.58, alias="RETRIEVAL_CONFIDENCE_THRESHOLD")
+    retrieval_confidence_threshold: float = Field(default=0.5, alias="RETRIEVAL_CONFIDENCE_THRESHOLD")
     reranker_enabled: bool = Field(default=False, alias="RERANKER_ENABLED")
     reranker_provider: str = Field(default="http", alias="RERANKER_PROVIDER")
     reranker_base_url: str = Field(default="http://127.0.0.1:8091", alias="RERANKER_BASE_URL")

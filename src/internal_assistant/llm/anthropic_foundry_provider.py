@@ -55,6 +55,7 @@ CHAT_PLAN_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "intent": {"type": "string"},
+        "out_of_scope": {"type": "boolean"},
         "needs_conversation_memory": {"type": "boolean"},
         "needs_knowledge_index": {"type": "boolean"},
         "can_answer_from_conversation_only": {"type": "boolean"},
@@ -92,6 +93,7 @@ CHAT_PLAN_SCHEMA: dict[str, Any] = {
     },
     "required": [
         "intent",
+        "out_of_scope",
         "needs_conversation_memory",
         "needs_knowledge_index",
         "can_answer_from_conversation_only",

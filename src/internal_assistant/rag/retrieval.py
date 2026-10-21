@@ -199,6 +199,7 @@ class HybridRetriever:
         self.chunk_repository = ChunkRepository(session)
         self.reranker_candidates = max(1, int(settings.reranker_candidates))
         self.context_max_tokens = max(1, int(settings.retrieval_context_max_tokens))
+        self.confidence_threshold = float(settings.retrieval_confidence_threshold)
         self.reranker = reranker if reranker is not None else build_default_reranker()
 
     def search(
@@ -213,7 +214,8 @@ class HybridRetriever:
         effective = (config or DEFAULT_RETRIEVAL_CONFIG).normalized()
         if limit is not None:
             effective = replace(effective, top_k=max(1, int(limit))).normalized()
-        effective_filters = normalize_retrieval_filters(filters)
+        requested_filters = normalize_retrieval_filters(filters)
+        effective_filters = requested_filters.hard()
         text_query = (keyword_query or "").strip() or query
 
         with start_span(
@@ -264,6 +266,30 @@ class HybridRetriever:
                 rerank_started = time.perf_counter()
                 reranked = self._rerank(query, ordered)
                 rerank_ms = round((time.perf_counter() - rerank_started) * 1000, 1)
+                weak_filtered = (
+                    effective_filters.active()
+                    and not filter_fallback
+                    and reranked
+                    and reranked[0].final_score < getattr(self, "confidence_threshold", 0.0)
+                )
+                if weak_filtered:
+                    # Los filtros han dejado resultados poco relevantes: se repite sin filtros y gana el mejor.
+                    unfiltered_vector = self.chunk_repository.vector_search(query_embedding, limit=effective.vector_candidates)
+                    unfiltered_text = self.chunk_repository.text_search(text_query, limit=effective.text_candidates)
+                    unfiltered_ordered = self._merge_rows(unfiltered_vector, unfiltered_text, effective)
+                    unfiltered_reranked = self._rerank(query, unfiltered_ordered)
+                    if unfiltered_reranked and unfiltered_reranked[0].final_score > reranked[0].final_score:
+                        filtered_attempt = {
+                            "filters": effective_filters.to_dict(),
+                            "reason": "weak_filtered_results",
+                            "best_filtered_score": reranked[0].final_score,
+                            "vector": _row_stage(vector_rows),
+                            "bm25": _row_stage(text_rows),
+                            "fused_count": len(ordered),
+                        }
+                        filter_fallback = True
+                        vector_rows, text_rows = unfiltered_vector, unfiltered_text
+                        ordered, reranked = unfiltered_ordered, unfiltered_reranked
                 ranked = reranked or ordered
                 top = ranked[: effective.top_k]
                 results = self._fit_token_budget(top)
@@ -284,6 +310,7 @@ class HybridRetriever:
                                 "context_max_tokens": getattr(self, "context_max_tokens", 0),
                             },
                             "filters": effective_filters.to_dict(),
+                            "planner_filters": requested_filters.to_dict(),
                             "filter_fallback": filter_fallback,
                             "filtered_attempt": filtered_attempt,
                             "reranker": {

@@ -141,3 +141,20 @@ def test_memory_text_includes_raw_summary_and_metadata():
     assert "systems: OnboardHub" in memory_text
     assert "sources: document:4" in memory_text
     assert "content: Soy nuevo" in memory_text
+
+
+def test_out_of_scope_plan_is_rejected_without_retrieval():
+    from types import SimpleNamespace
+
+    from internal_assistant.chat.service import ChatService
+    from internal_assistant.schemas import ChatPlan
+
+    service = ChatService.__new__(ChatService)
+    service._trace_formatted_response = lambda *args, **kwargs: None
+    response = service._out_of_scope_response(
+        0, {}, ChatPlan(out_of_scope=True, needs_knowledge_index=False), started_at=0.0, trace_run=None
+    )
+
+    assert response["answer"].startswith("No puedo ayudar")
+    assert response["_meta"]["actual_behavior"] == "reject_out_of_scope"
+    assert response["sources"] == [] and not response["needs_clarification"]

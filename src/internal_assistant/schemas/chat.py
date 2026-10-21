@@ -47,6 +47,8 @@ class AssistantDecision(BaseModel):
 
 class ChatPlan(BaseModel):
     intent: str = "question_answering"
+    # La pregunta no tiene relacion con la operacion de la empresa: se rechaza sin buscar.
+    out_of_scope: bool = False
     needs_conversation_memory: bool = False
     needs_knowledge_index: bool = True
     can_answer_from_conversation_only: bool = False

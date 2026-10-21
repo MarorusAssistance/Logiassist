@@ -375,6 +375,9 @@ function evidenceFor(response, usedCount) {
   if (behavior === "reject_prompt_injection") {
     return { kind: "none", text: "Consulta bloqueada por seguridad" };
   }
+  if (behavior === "reject_out_of_scope") {
+    return { kind: "weak", text: "Fuera del ámbito de la demo" };
+  }
   if (behavior === "abstain_and_offer_incident_registration") {
     return { kind: "none", text: "Sin evidencia en la documentación ni en las incidencias" };
   }

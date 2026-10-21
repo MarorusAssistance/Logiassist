@@ -569,6 +569,14 @@ class ChatService:
             recent_messages=recent_messages,
             trace_run=trace_run,
         )
+        if plan.out_of_scope:
+            return self._out_of_scope_response(
+                conversation_id, state, plan, started_at=started_at, trace_run=trace_run
+            )
+        if not plan.needs_knowledge_index and not plan.needs_conversation_memory and not recent_messages:
+            # Sin historial no hay nada que responder "de memoria": se busca en el indice.
+            plan.needs_knowledge_index = True
+            plan.knowledge_index_query = plan.knowledge_index_query.strip() or request.message
         planner_payload = plan.model_dump()
         retrieval_filters = plan.retrieval_filters
         early_signals = detect_query_signals(request.message)
@@ -1426,6 +1434,53 @@ class ChatService:
                 "actual_behavior": "reject_prompt_injection",
                 "latency_ms": int((time.perf_counter() - started_at) * 1000),
                 "security": {"input_guard": guard.to_dict()},
+            },
+            "_state": state,
+        }
+
+    def _out_of_scope_response(
+        self,
+        conversation_id: int,
+        state: dict,
+        plan: ChatPlan,
+        *,
+        started_at: float,
+        trace_run: Any | None,
+    ) -> dict[str, Any]:
+        answer = (
+            "No puedo ayudar con esa consulta: solo respondo sobre la operación interna de la empresa "
+            "(procedimientos, políticas, incidencias y sistemas como AlmaTrack WMS, RutaNexo TMS o SafeGate).\n\n"
+            "Si tienes una duda operativa, cuéntame el sistema y el proceso y lo reviso con las fuentes."
+        )
+        planner_payload = plan.model_dump()
+        self._trace_formatted_response(
+            trace_run,
+            answer=answer,
+            sources=[],
+            related_incidents=[],
+            conversation_id=conversation_id,
+            actual_behavior="reject_out_of_scope",
+            decision={"planner_output": planner_payload, "policy_decision": "out_of_scope"},
+        )
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "related_incidents": [],
+            "needs_clarification": False,
+            "clarification_attempt": int(state.get("clarification_attempts", 0)),
+            "should_offer_incident": False,
+            "adaptive_card": None,
+            "fallback_text": answer,
+            "_meta": {
+                "retrieved": [],
+                "conversation_memory": [],
+                "confidence": 0.0,
+                "decision": None,
+                "context_chunks": [],
+                "planner_output": planner_payload,
+                "actual_behavior": "reject_out_of_scope",
+                "latency_ms": int((time.perf_counter() - started_at) * 1000),
             },
             "_state": state,
         }

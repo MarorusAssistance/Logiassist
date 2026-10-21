@@ -43,6 +43,7 @@ Tu tarea no es responder al usuario. Tu tarea es decidir que datos hay que consu
 
 Devuelve solo JSON con estos campos:
 - intent
+- out_of_scope
 - needs_conversation_memory
 - needs_knowledge_index
 - can_answer_from_conversation_only
@@ -58,12 +59,15 @@ Devuelve solo JSON con estos campos:
 - reason
 
 Reglas:
+- Ambito: el asistente solo cubre la operacion interna de la empresa logistica: sus sistemas, procedimientos, politicas internas (incluida la politica sobre como responde este asistente y que fuentes usa), incidencias, onboarding y KPIs operativos.
+- out_of_scope=true solo si la pregunta no tiene relacion con ese ambito: opinion o actualidad, recetas, temas personales, datos privados de empleados (sueldos, direcciones), etc. En ese caso needs_knowledge_index=false.
+- Ante la duda, busca: needs_knowledge_index=true. Las preguntas sobre como debe actuar el asistente, sus criterios o sus fuentes tambien se buscan en el indice.
 - Si el usuario hace follow-up sobre una respuesta anterior, activa needs_conversation_memory.
 - Si hace falta documentacion, tickets o procedimientos del indice, activa needs_knowledge_index.
 - Si solo pregunta por algo dicho antes, usa can_answer_from_conversation_only.
 - Las queries deben ser abstracciones semanticas limpias, no concatenaciones literales.
 - search_keywords: 3-8 terminos clave para la busqueda por palabras clave (BM25): sistemas, objetos, acciones y codigos de error. Sin relleno ni palabras como "como", "donde", "puedo". Ejemplo: "donde esta el boton para subir una incidencia" -> ["boton", "subir", "incidencia"].
-- Si falta un dato imprescindible antes de buscar, usa should_ask_clarification_first.
+- should_ask_clarification_first solo si el mensaje no menciona ningun sistema, proceso, documento ni objeto concreto (p. ej. 'no funciona', 'tengo un problema'). Si la pregunta se entiende, busca primero; la aclaracion ya la decidira la respuesta con las fuentes delante.
 - No inventes sistemas. Sistemas permitidos: LogiCore ERP, AlmaTrack WMS, RutaNexo TMS, HelpOps, DocuFlow, OnboardHub, SafeGate, QualiTrace QMS, ScanBridge IDP, OpsLake.
 - Rellena retrieval_filters solo con valores evidentes en el mensaje o memoria reciente.
 - Valores permitidos:
