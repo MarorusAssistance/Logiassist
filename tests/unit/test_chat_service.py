@@ -141,7 +141,7 @@ class CapturingRetriever:
         self.queries = []
         self.filters = []
 
-    def search(self, query, query_embedding, limit=5, config=None, filters=None):
+    def search(self, query, query_embedding, limit=5, config=None, filters=None, keyword_query=None):
         self.queries.append(query)
         self.filters.append(filters)
         return self.results[:limit]
@@ -924,7 +924,7 @@ def test_handle_chat_uses_default_retrieval_config(monkeypatch):
         def __init__(self):
             self.config = None
 
-        def search(self, query, query_embedding, limit=5, config=None, filters=None):
+        def search(self, query, query_embedding, limit=5, config=None, filters=None, keyword_query=None):
             self.config = config
             return [
                 RetrievedChunk(

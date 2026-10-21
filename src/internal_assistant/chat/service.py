@@ -17,6 +17,7 @@ from internal_assistant.config import get_settings
 from internal_assistant.llm import LLMProvider, build_default_provider
 from internal_assistant.llm.common import build_chat_messages
 from internal_assistant.observability import RagTrace, get_logger, start_span
+from internal_assistant.observability.trace_store import record_trace_event
 from internal_assistant.observability.tracing import (
     retrieval_span_attributes,
     serialize_chunks_for_langsmith,
@@ -33,6 +34,7 @@ from internal_assistant.repositories import (
     MessageRepository,
     RetrievalLogRepository,
 )
+from internal_assistant.rag.keywords import build_keyword_query
 from internal_assistant.rag import DEFAULT_RETRIEVAL_CONFIG, HybridRetriever, RetrievalConfig, RetrievalFilters
 from internal_assistant.schemas import ChatPlan, ChatRequest, ChatResponse, FeedbackCreate, SourceSnippet
 from internal_assistant.security.prompt_guard import (
@@ -45,6 +47,18 @@ from internal_assistant.security.prompt_guard import (
 )
 
 logger = get_logger(__name__)
+
+_EXCERPT_HEADER_LINE = re.compile(r"^(Titulo|Sistema|Tipo|Departamento):.*$", re.MULTILINE)
+_EXCERPT_LABEL = re.compile(r"^(Descripcion|Resolucion|Contenido):\s*", re.MULTILINE)
+
+
+def _source_excerpt(content: str, limit: int = 260) -> str:
+    """Fragmento legible para mostrar: sin la cabecera de metadatos que se anade al indexar."""
+    text = _EXCERPT_LABEL.sub("", _EXCERPT_HEADER_LINE.sub("", content or ""))
+    text = " ".join(text.split())
+    if text[:1].islower():
+        text = "…" + text
+    return text[:limit]
 
 
 class ChatService:
@@ -60,6 +74,7 @@ class ChatService:
         self.memories = ConversationMemoryRepository(session)
         self.retriever = HybridRetriever(session)
         self.last_output_findings: list[str] = []
+        self.last_retrieval_debug: dict[str, Any] = {}
         self.last_output_blocked = False
 
     def classify_intent(self, message: str, state: dict | None = None) -> str:
@@ -70,6 +85,7 @@ class ChatService:
         message: str,
         retrieval_config: RetrievalConfig | None = None,
         retrieval_filters: RetrievalFilters | dict | None = None,
+        keyword_query: str | None = None,
     ) -> list:
         query_embedding = self.llm_provider.embed_texts([message])[0]
         return self.retriever.search(
@@ -77,6 +93,7 @@ class ChatService:
             query_embedding,
             config=retrieval_config or DEFAULT_RETRIEVAL_CONFIG,
             filters=retrieval_filters,
+            keyword_query=keyword_query,
         )
 
     def calculate_confidence(self, retrieved: list) -> float:
@@ -198,6 +215,7 @@ class ChatService:
         *,
         state: dict | None = None,
         retrieval_config: RetrievalConfig | None = None,
+        trace_metadata: dict[str, Any] | None = None,
     ) -> tuple[ChatResponse, dict[str, Any], dict[str, Any]]:
         current_state = dict(state or {})
         intent = self.classify_intent(request.message, current_state)
@@ -214,9 +232,13 @@ class ChatService:
                 "conversation_id": request.conversation_id or 0,
                 "user_id_hash": user_hash(request.user_id),
                 "mode": "simulation",
+                "provider": getattr(self.settings, "llm_provider", ""),
+                "chat_model": getattr(self.settings, "chat_model", ""),
+                **(trace_metadata or {}),
             },
         ) as trace_run:
             input_guard = scan_user_input(request.message)
+            record_trace_event("input_guard", {"intent": intent, **input_guard.to_dict()})
             if input_guard.blocked:
                 response = self._blocked_input_response(
                     request.conversation_id or 0,
@@ -238,8 +260,10 @@ class ChatService:
                     trace_run=trace_run,
                 )
             meta = response.pop("_meta", {})
+            meta["retrieval_debug"] = self.last_retrieval_debug
             next_state = response.pop("_state")
-            chat_response = ChatResponse(**response)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior=meta.get("actual_behavior"))
+            meta["request_id"] = trace_run.request_id
             trace_run.set_outputs(self._trace_response_payload(chat_response))
             return chat_response, next_state, meta
 
@@ -282,6 +306,8 @@ class ChatService:
             )
             user_message = self.messages.create(conversation.id, "user", request.message, intent=intent)
             input_guard = scan_user_input(request.message)
+            trace_run.update_metadata(conversation_id=conversation.id, user_message_id=user_message.id, intent=intent)
+            record_trace_event("input_guard", {"intent": intent, **input_guard.to_dict()})
             set_span_attributes(
                 request_span,
                 {"security.input_risk": input_guard.risk, "security.input_categories": input_guard.categories},
@@ -295,6 +321,8 @@ class ChatService:
 
             if intent == "feedback" and not input_guard.blocked:
                 chat_response = self._handle_feedback_message(conversation.id, user_message.id, request)
+                chat_response.request_id = trace_run.request_id
+                chat_response.behavior = "feedback"
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -336,7 +364,7 @@ class ChatService:
                     )
                     self.session.commit()
                 response["message_id"] = assistant_message.id
-                chat_response = ChatResponse(**response)
+                chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior="register_incident")
                 trace_run.set_outputs(self._trace_response_payload(chat_response))
                 set_span_attributes(
                     request_span,
@@ -373,7 +401,7 @@ class ChatService:
                 assistant_message = self.messages.create(conversation.id, "assistant", response["answer"], intent=intent)
                 self.session.commit()
             response["message_id"] = assistant_message.id
-            chat_response = ChatResponse(**response)
+            chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior=meta.get("actual_behavior"))
             if not input_guard.blocked:
                 # Los turnos bloqueados no entran en memoria para no reinyectarlos en turnos futuros.
                 self._index_turn_memory(
@@ -541,6 +569,14 @@ class ChatService:
             recent_messages=recent_messages,
             trace_run=trace_run,
         )
+        if plan.out_of_scope:
+            return self._out_of_scope_response(
+                conversation_id, state, plan, started_at=started_at, trace_run=trace_run
+            )
+        if not plan.needs_knowledge_index and not plan.needs_conversation_memory and not recent_messages:
+            # Sin historial no hay nada que responder "de memoria": se busca en el indice.
+            plan.needs_knowledge_index = True
+            plan.knowledge_index_query = plan.knowledge_index_query.strip() or request.message
         planner_payload = plan.model_dump()
         retrieval_filters = plan.retrieval_filters
         early_signals = detect_query_signals(request.message)
@@ -691,11 +727,19 @@ class ChatService:
                     "retrieval.filters.systems": retrieval_filters.affected_systems,
                 },
             ) as retrieve_span:
+                keyword_query = build_keyword_query(plan.search_keywords, knowledge_query, request.message)
                 retrieved = self.retrieve(
                     knowledge_query,
                     retrieval_config=effective_config,
                     retrieval_filters=retrieval_filters,
+                    keyword_query=keyword_query,
                 )
+                self.last_retrieval_debug = {
+                    "knowledge_query": knowledge_query,
+                    "search_keywords": list(plan.search_keywords),
+                    "retrieval_filters": retrieval_filters.to_dict(),
+                    **dict(getattr(self.retriever, "last_debug", {}) or {}),
+                }
                 retrieved, quarantined_chunk_ids = self._quarantine_retrieved(retrieved)
                 confidence = self.calculate_confidence(retrieved)
                 retrieve_attrs = retrieval_span_attributes(retrieved=retrieved, confidence=confidence)
@@ -708,6 +752,9 @@ class ChatService:
                         "retrieved_count": len(retrieved),
                         "retrieval_filters": retrieval_filters.to_dict(),
                         "filter_reason": plan.filter_reason,
+                        "keyword_query": keyword_query,
+                        "retrieval_debug": self.last_retrieval_debug,
+                        "quarantined_chunk_ids": quarantined_chunk_ids,
                     }
                 )
 
@@ -747,6 +794,22 @@ class ChatService:
                     "signals.status_request": query_signals.status_request,
                 },
             )
+        low_confidence = (not memory_results) and (
+            not retrieved or confidence < self.settings.retrieval_confidence_threshold
+        )
+        record_trace_event(
+            "evidence_gate",
+            {
+                "confidence": confidence,
+                "confidence_threshold": self.settings.retrieval_confidence_threshold,
+                "memory_result_count": len(memory_results),
+                "retrieved_count": len(retrieved),
+                "low_confidence_gate": low_confidence,
+                "pre_gate_answer": bool(plan.needs_knowledge_index and self._should_pre_gate_answer(evidence_assessment)),
+                "query_signals": query_signals.to_dict(),
+                "evidence_assessment": evidence_assessment.to_dict(),
+            },
+        )
         datasource_status = {
             "conversation_memory": {
                 "requested": plan.needs_conversation_memory,
@@ -770,7 +833,13 @@ class ChatService:
             },
         }
 
-        if (not memory_results) and (not retrieved or confidence < self.settings.retrieval_confidence_threshold):
+        if low_confidence:
+            low_confidence_decision = {
+                "planner_output": planner_payload,
+                "policy_decision": "low_retrieval_confidence",
+                "confidence": confidence,
+                "confidence_threshold": self.settings.retrieval_confidence_threshold,
+            }
             clarification_attempts += 1
             state["clarification_attempts"] = clarification_attempts
             if clarification_attempts >= 3:
@@ -783,6 +852,7 @@ class ChatService:
                     related_incidents=[],
                     conversation_id=conversation_id,
                     actual_behavior="abstain_and_offer_incident_registration",
+                    decision=low_confidence_decision,
                 )
                 latency_ms = int((time.perf_counter() - started_at) * 1000)
                 if write_retrieval_logs:
@@ -831,6 +901,7 @@ class ChatService:
                 related_incidents=[],
                 conversation_id=conversation_id,
                 actual_behavior="ask_clarification",
+                decision=low_confidence_decision,
             )
             latency_ms = int((time.perf_counter() - started_at) * 1000)
             if write_retrieval_logs:
@@ -1054,6 +1125,10 @@ class ChatService:
                 {
                     "decision": serialize_decision_for_langsmith(decision),
                     "context_chunks": serialize_context_for_langsmith(context_chunks),
+                    "output_guard": {
+                        "blocked": self.last_output_blocked,
+                        "findings": self.last_output_findings,
+                    },
                 }
             )
             set_span_attributes(
@@ -1243,6 +1318,8 @@ class ChatService:
         if self.last_output_blocked:
             sources = []
             related_incident_objects = []
+        else:
+            sources = self._mark_used_sources(sources, retrieved, decision.used_chunk_ids)
         state["clarification_attempts"] = 0
         state["offer_incident"] = False
         actual_behavior = (
@@ -1357,6 +1434,53 @@ class ChatService:
                 "actual_behavior": "reject_prompt_injection",
                 "latency_ms": int((time.perf_counter() - started_at) * 1000),
                 "security": {"input_guard": guard.to_dict()},
+            },
+            "_state": state,
+        }
+
+    def _out_of_scope_response(
+        self,
+        conversation_id: int,
+        state: dict,
+        plan: ChatPlan,
+        *,
+        started_at: float,
+        trace_run: Any | None,
+    ) -> dict[str, Any]:
+        answer = (
+            "No puedo ayudar con esa consulta: solo respondo sobre la operación interna de la empresa "
+            "(procedimientos, políticas, incidencias y sistemas como AlmaTrack WMS, RutaNexo TMS o SafeGate).\n\n"
+            "Si tienes una duda operativa, cuéntame el sistema y el proceso y lo reviso con las fuentes."
+        )
+        planner_payload = plan.model_dump()
+        self._trace_formatted_response(
+            trace_run,
+            answer=answer,
+            sources=[],
+            related_incidents=[],
+            conversation_id=conversation_id,
+            actual_behavior="reject_out_of_scope",
+            decision={"planner_output": planner_payload, "policy_decision": "out_of_scope"},
+        )
+        return {
+            "conversation_id": conversation_id,
+            "answer": answer,
+            "sources": [],
+            "related_incidents": [],
+            "needs_clarification": False,
+            "clarification_attempt": int(state.get("clarification_attempts", 0)),
+            "should_offer_incident": False,
+            "adaptive_card": None,
+            "fallback_text": answer,
+            "_meta": {
+                "retrieved": [],
+                "conversation_memory": [],
+                "confidence": 0.0,
+                "decision": None,
+                "context_chunks": [],
+                "planner_output": planner_payload,
+                "actual_behavior": "reject_out_of_scope",
+                "latency_ms": int((time.perf_counter() - started_at) * 1000),
             },
             "_state": state,
         }
@@ -1716,6 +1840,14 @@ class ChatService:
             detail = detail[:157].rstrip() + "..."
         return f"- [{index}] {source_type} {source.source_id} - {title}: {detail}"
 
+    def _mark_used_sources(self, sources: list[SourceSnippet], retrieved: list, used_chunk_ids: list[int]) -> list[SourceSnippet]:
+        """Marca las fuentes que el modelo cito y las pone primero, manteniendo el orden de relevancia."""
+        used_ids = set(used_chunk_ids or [])
+        used_keys = {(str(item.source_type), int(item.source_id)) for item in retrieved if item.chunk_id in used_ids}
+        for source in sources:
+            source.used = (str(source.source_type), int(source.source_id)) in used_keys
+        return sorted(sources, key=lambda source: not source.used)
+
     def _build_visible_sources(self, retrieved: list) -> list[SourceSnippet]:
         best_by_source: dict[tuple[str, int], tuple[int, float, SourceSnippet]] = {}
         for position, item in enumerate(retrieved):
@@ -1727,7 +1859,7 @@ class ChatService:
                 source_id=item.source_id,
                 title=metadata.get("title", f"{item.source_type}-{item.source_id}"),
                 source_url=metadata.get("source_url"),
-                excerpt=item.content[:260],
+                excerpt=_source_excerpt(item.content),
                 chunk_id=item.chunk_id,
             )
             current = best_by_source.get(key)

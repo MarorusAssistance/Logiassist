@@ -205,7 +205,7 @@ def select_provider(provider_name: str):
         return MockLLMProvider(embedding_dimensions=settings.embedding_dimensions)
     if normalized == "openai":
         return OpenAIProvider()
-    if normalized == "openai_compatible":
+    if normalized in {"openai_compatible", "anthropic_foundry", "azure_foundry"}:
         # Use the same provider composition as runtime so split setups such as
         # local chat + OpenAI embeddings evaluate against the indexed vector space.
         return build_default_provider()

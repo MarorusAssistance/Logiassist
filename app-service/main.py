@@ -30,9 +30,11 @@ from internal_assistant.config import get_settings
 from internal_assistant.db import get_session, session_scope
 from internal_assistant.observability import configure_logging, get_logger, start_span
 from internal_assistant.observability.tracing import set_span_attributes, user_hash
+from internal_assistant.observability.usage import metering
 from internal_assistant.repositories import DocumentRepository, IncidentRepository
 from internal_assistant.runtime import assert_runtime_settings, build_health_report
 from internal_assistant.schemas import ChatRequest, ChatResponse, DocumentRead, FeedbackCreate, IncidentRead
+from internal_assistant.security.usage_limits import UsageLimiter, client_ip, client_key, total_tokens
 from internal_assistant.teams import coerce_activity_input
 
 configure_logging()
@@ -118,6 +120,29 @@ adapter.on_turn_error = on_turn_error
 DbSession = Annotated[Session, Depends(get_session)]
 
 
+def _enforce_usage_limits(request: Request) -> str:
+    """Rechaza con 429 si el cliente o la demo han superado sus limites; devuelve la clave del cliente."""
+    key = client_key(client_ip(request.headers, request.client.host if request.client else None))
+    with session_scope() as limits_session:
+        decision = UsageLimiter(limits_session, settings).check(key)
+    if not decision.allowed:
+        logger.warning("Limite de uso alcanzado (%s) para cliente %s", decision.reason, key[:8])
+        raise HTTPException(
+            status_code=429,
+            detail=decision.message,
+            headers={"Retry-After": str(decision.retry_after_seconds)},
+        )
+    return key
+
+
+def _record_usage(key: str, meter) -> None:
+    try:
+        with session_scope() as limits_session:
+            UsageLimiter(limits_session, settings).record(key, total_tokens(meter))
+    except Exception as exc:  # El registro de uso nunca debe romper la respuesta.
+        logger.warning("No se pudo registrar el uso de la peticion: %s", exc)
+
+
 @app.get("/", include_in_schema=False)
 def demo_index() -> FileResponse:
     return FileResponse(STATIC_ROOT / "index.html")
@@ -141,7 +166,8 @@ def health_deep(session: DbSession) -> JSONResponse:
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest, session: DbSession) -> ChatResponse:
+def chat(payload: ChatRequest, session: DbSession, request: Request) -> ChatResponse:
+    limit_key = _enforce_usage_limits(request)
     with start_span(
         "api.chat",
         {
@@ -152,7 +178,9 @@ def chat(payload: ChatRequest, session: DbSession) -> ChatResponse:
         },
     ) as span:
         service = ChatService(session)
-        response = service.handle_chat(payload)
+        with metering() as meter:
+            response = service.handle_chat(payload)
+        _record_usage(limit_key, meter)
         set_span_attributes(
             span,
             {
@@ -171,7 +199,9 @@ def _sse_event(event: str, data: dict) -> str:
 
 
 @app.post("/api/chat/stream")
-def chat_stream(payload: ChatRequest) -> StreamingResponse:
+def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
+    limit_key = _enforce_usage_limits(request)
+
     def events():
         event_queue: Queue[tuple[str, dict] | None] = Queue()
 
@@ -180,9 +210,10 @@ def chat_stream(payload: ChatRequest) -> StreamingResponse:
 
         def worker() -> None:
             try:
-                with session_scope() as session:
+                with session_scope() as session, metering() as meter:
                     service = ChatService(session)
                     response = service.handle_chat(payload, stream_token_callback=push_token)
+                _record_usage(limit_key, meter)
                 response_payload = response.model_dump()
                 event_queue.put(
                     (

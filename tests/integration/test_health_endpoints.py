@@ -45,13 +45,13 @@ def test_app_service_serves_demo_ui(app_paths, load_module):
     css_response = client.get("/static/styles.css")
 
     assert root_response.status_code == 200
-    assert "LogiAssist Demo Console" in root_response.text
+    assert "<title>Logiassist</title>" in root_response.text
     assert demo_response.status_code == 200
-    assert "LogiAssist Demo Console" in demo_response.text
+    assert "<title>Logiassist</title>" in demo_response.text
     assert js_response.status_code == 200
     assert "requestJson" in js_response.text
     assert css_response.status_code == 200
-    assert ".shell" in css_response.text
+    assert "--maroon" in css_response.text
 
 
 def test_local_functions_health_endpoints_are_available(app_paths, load_module):

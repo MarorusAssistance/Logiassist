@@ -46,6 +46,18 @@ def validate_runtime_settings(settings: Settings, *, require_bot: bool | None = 
         errors.append("OPENAI_API_KEY es obligatorio cuando LLM_PROVIDER=openai")
     elif provider == "openai_compatible" and not settings.llm_base_url.strip():
         errors.append("LLM_BASE_URL es obligatorio cuando LLM_PROVIDER=openai_compatible")
+    elif provider == "azure_foundry":
+        if _is_placeholder(settings.azure_ai_api_key):
+            errors.append("AZURE_AI_API_KEY es obligatorio cuando LLM_PROVIDER=azure_foundry")
+        if not (settings.azure_ai_resource.strip() or settings.azure_ai_base_url.strip()):
+            errors.append("AZURE_AI_RESOURCE o AZURE_AI_BASE_URL es obligatorio cuando LLM_PROVIDER=azure_foundry")
+    elif provider == "anthropic_foundry":
+        if _is_placeholder(settings.anthropic_foundry_api_key):
+            errors.append("ANTHROPIC_FOUNDRY_API_KEY es obligatorio cuando LLM_PROVIDER=anthropic_foundry")
+        if not (settings.anthropic_foundry_resource.strip() or settings.anthropic_foundry_base_url.strip()):
+            errors.append("ANTHROPIC_FOUNDRY_RESOURCE o ANTHROPIC_FOUNDRY_BASE_URL es obligatorio cuando LLM_PROVIDER=anthropic_foundry")
+        if embeddings_provider != "openai":
+            errors.append("LLM_PROVIDER=anthropic_foundry requiere EMBEDDINGS_PROVIDER=openai")
 
     if embeddings_provider == "openai" and _is_placeholder(settings.openai_api_key):
         errors.append("OPENAI_API_KEY es obligatorio cuando EMBEDDINGS_PROVIDER=openai")
@@ -53,7 +65,7 @@ def validate_runtime_settings(settings: Settings, *, require_bot: bool | None = 
     if environment in {"dev", "demo"} and provider == "mock":
         errors.append("LLM_PROVIDER=mock no es valido en APP_ENV=dev|demo")
 
-    supported_split_provider = provider == "openai_compatible" and embeddings_provider == "openai"
+    supported_split_provider = provider in {"openai_compatible", "anthropic_foundry"} and embeddings_provider == "openai"
     if embeddings_provider not in {"", "auto", provider}:
         if not (embeddings_provider == "mock" and provider == "mock") and not supported_split_provider:
             errors.append(

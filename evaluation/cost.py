@@ -84,7 +84,11 @@ def price_usage(row: dict[str, Any], pricing: dict[str, Any]) -> tuple[float | N
     elif component == "embeddings":
         usd = int(row.get("input_tokens", 0)) * float(prices.get("input_per_1m", 0.0)) / 1_000_000
     elif component == "reranker":
-        usd = float(row.get("search_units", 0.0)) * float(prices.get("per_1k_search_units", 0.0)) / 1_000
+        # Cohere factura por search units; Voyage, por tokens procesados.
+        usd = (
+            float(row.get("search_units", 0.0)) * float(prices.get("per_1k_search_units", 0.0)) / 1_000
+            + int(row.get("input_tokens", 0)) * float(prices.get("input_per_1m", 0.0)) / 1_000_000
+        )
     else:
         return None, f"componente desconocido '{component}'"
     return usd, note or f"precio {price_key}"

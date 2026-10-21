@@ -212,3 +212,6 @@ teams-app/build/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Trazas extendidas por peticion (TRACE_STORE=local)
+traces/

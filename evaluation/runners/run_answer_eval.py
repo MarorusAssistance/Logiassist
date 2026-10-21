@@ -12,6 +12,7 @@ from internal_assistant.rag import RetrievalConfig
 
 from evaluation.cost import build_cost_section, load_pricing, render_cost_markdown, usage_row_fields
 from evaluation.judges import HeuristicJudge, LLMJudge
+from evaluation.metrics.retrieval_metrics import diagnose_retrieval
 from evaluation.metrics import compute_abstention_metrics, compute_answer_metrics, compute_citation_metrics
 from evaluation.runners.common import answer_recommendations, build_worst_cases, retrieval_config_to_dict, select_examples
 from evaluation.utils import (
@@ -59,6 +60,7 @@ def _evaluate_scenario(
                 request,
                 state=state,
                 retrieval_config=retrieval_config,
+                trace_metadata={"eval_scenario_id": turn.scenario_id, "eval_turn_id": turn.turn_id},
             )
             verdict = evaluator.judge(turn, response, meta)
 
@@ -78,7 +80,9 @@ def _evaluate_scenario(
             "sources": [item.model_dump() for item in response.sources],
             "retrieved_source_ids": _ordered_retrieved_source_ids(meta.get("retrieved", [])),
             "retrieved_chunk_ids": [item.chunk_id for item in meta.get("retrieved", [])],
+            "retrieval_diagnosis": diagnose_retrieval(list(turn.expected_source_ids), meta.get("retrieval_debug")),
             "latency_ms": meta.get("latency_ms", 0),
+            "request_id": meta.get("request_id"),
             **usage_row_fields(turn_meter, pricing),
             **verdict,
         }

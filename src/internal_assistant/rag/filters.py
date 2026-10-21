@@ -135,6 +135,16 @@ class RetrievalFilters(BaseModel):
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(exclude_none=True)
 
+    def hard(self) -> "RetrievalFilters":
+        """Filtros que se aplican de verdad en la busqueda: tipo de fuente y sistema mencionado.
+
+        Tipo de documento, departamento, estado de incidencia y etiquetas son conjeturas del
+        planificador; aplicarlos como filtro duro dejaba fuera la fuente correcta (p. ej. una
+        "politica" cuando el planificador pedia "procedimiento"). El reranker ya prioriza por
+        contenido, como en Azure AI Search, donde el filtro es explicito y lo demas es ranking.
+        """
+        return RetrievalFilters(source_types=self.source_types, affected_systems=self.affected_systems)
+
 
 def normalize_retrieval_filters(value: Any) -> RetrievalFilters:
     if isinstance(value, RetrievalFilters):

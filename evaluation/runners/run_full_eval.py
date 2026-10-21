@@ -12,6 +12,7 @@ from evaluation.runners.common import build_worst_cases, select_examples
 from evaluation.runners.run_ablation_eval import run_ablation_eval
 from evaluation.runners.run_answer_eval import run_answer_eval
 from evaluation.runners.run_retrieval_eval import run_retrieval_eval
+from evaluation.metrics.retrieval_metrics import RETRIEVAL_STAGES, summarize_diagnosis
 from evaluation.utils import load_questions, write_report_bundle
 
 
@@ -28,6 +29,22 @@ def _compute_adversarial_metrics(rows: list[dict[str, Any]]) -> dict[str, float]
         "out_of_scope_rejection_rate": rate("out_of_scope"),
         "hallucination_request_rejection_rate": rate("hallucination_request"),
     }
+
+
+def render_diagnosis_markdown(retrieval_rows: list[dict[str, Any]], answer_rows: list[dict[str, Any]]) -> str:
+    """Donde se pierde la fuente esperada: candidatos -> fusion/reranker -> contexto (top 16) -> top 5."""
+    retrieval = summarize_diagnosis(retrieval_rows)
+    answer = summarize_diagnosis(answer_rows)
+    labels = {
+        "not_in_candidates": "No llega a candidatos (ni vector ni BM25)",
+        "dropped_before_context": "Se pierde en fusion/reranker (no entra en el contexto)",
+        "in_context_rank_6_16": "En el contexto, puesto 6-16",
+        "in_top_5": "En el top 5",
+    }
+    lines = ["\n## Retrieval diagnosis\n", "| etapa | retrieval (pregunta tal cual) | answer (con planner) |", "| --- | --- | --- |"]
+    for stage in RETRIEVAL_STAGES:
+        lines.append(f"| {labels[stage]} | {retrieval[stage]} | {answer[stage]} |")
+    return "\n".join(lines) + "\n"
 
 
 def run_full_eval(
@@ -131,6 +148,8 @@ def run_full_eval(
     summary = {
         "Questions evaluated": len(answer_report["per_question_results"]),
         "Retrieval hit@5": round(float(retrieval_report["aggregate_metrics"]["hit_at_5"]), 4),
+        "Retrieval hit@16": round(float(retrieval_report["aggregate_metrics"].get("hit_at_16", 0.0)), 4),
+        "Answer behavior match": round(float(answer_report["aggregate_metrics"]["answer"]["answer_expected_behavior_match"]), 4),
         "MRR": round(float(retrieval_report["aggregate_metrics"]["mrr"]), 4),
         "Citation coverage": round(float(answer_report["aggregate_metrics"]["citation"]["citation_coverage_rate"]), 4),
         "Abstention precision": round(float(answer_report["aggregate_metrics"]["abstention"]["abstention_precision"]), 4),
@@ -189,6 +208,7 @@ def run_full_eval(
     for key, value in summary.items():
         markdown += f"- {key}: {value}\n"
     markdown += "\n" + render_cost_markdown(cost)
+    markdown += render_diagnosis_markdown(retrieval_report["per_question_results"], answer_report["per_question_results"])
     markdown += "\n## Worst Cases\n"
     markdown += "| question_id | question | expected_behavior | actual_behavior | issue | retrieved_sources |\n"
     markdown += "| --- | --- | --- | --- | --- | --- |\n"

@@ -11,7 +11,7 @@ build_webapp_package() {
   rm -rf "${staging_dir}"
   mkdir -p "${staging_dir}"
   requirements_native="$(native_path "${staging_dir}/requirements.txt")"
-  "${PYTHON_CMD[@]}" -m uv export --format requirements-txt --no-hashes --no-dev --no-emit-project -o "${requirements_native}" >/dev/null
+  uv_cmd export --format requirements-txt --no-hashes --no-dev --no-emit-project -o "${requirements_native}" >/dev/null
   cp -R "${ROOT_DIR}/app-service" "${staging_dir}/app-service"
   cp -R "${ROOT_DIR}/src" "${staging_dir}/src"
   cp "${ROOT_DIR}/pyproject.toml" "${ROOT_DIR}/README.md" "${staging_dir}/"

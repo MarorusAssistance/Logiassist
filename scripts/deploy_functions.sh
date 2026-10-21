@@ -31,7 +31,7 @@ if target.exists():
 target.mkdir(parents=True, exist_ok=True)
 PY
   requirements_native="$(native_path "${staging_dir}/requirements.txt")"
-  "${PYTHON_CMD[@]}" -m uv export --format requirements-txt --no-hashes --no-dev --no-emit-project -o "${requirements_native}" >/dev/null
+  uv_cmd export --format requirements-txt --no-hashes --no-dev --no-emit-project -o "${requirements_native}" >/dev/null
   cat > "${staging_dir}/.deployment" <<'EOF'
 [config]
 SCM_DO_BUILD_DURING_DEPLOYMENT = true

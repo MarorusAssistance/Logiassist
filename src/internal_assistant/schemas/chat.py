@@ -14,6 +14,8 @@ class SourceSnippet(BaseModel):
     source_url: str | None = None
     excerpt: str
     chunk_id: int
+    # True si el modelo cito algun chunk de esta fuente (used_chunk_ids); False si solo se consulto.
+    used: bool = False
 
 
 class AssistantDecision(BaseModel):
@@ -45,6 +47,8 @@ class AssistantDecision(BaseModel):
 
 class ChatPlan(BaseModel):
     intent: str = "question_answering"
+    # La pregunta no tiene relacion con la operacion de la empresa: se rechaza sin buscar.
+    out_of_scope: bool = False
     needs_conversation_memory: bool = False
     needs_knowledge_index: bool = True
     can_answer_from_conversation_only: bool = False
@@ -54,6 +58,7 @@ class ChatPlan(BaseModel):
     user_context_summary: str = ""
     expected_source_preference: list[str] = Field(default_factory=list)
     mentioned_systems: list[str] = Field(default_factory=list)
+    search_keywords: list[str] = Field(default_factory=list)
     retrieval_filters: RetrievalFilters = Field(default_factory=RetrievalFilters)
     filter_reason: str = ""
     reason: str = ""
@@ -87,7 +92,7 @@ class ChatPlan(BaseModel):
             return " ".join(str(item).strip() for item in value if str(item).strip())
         return value
 
-    @field_validator("expected_source_preference", "mentioned_systems", mode="before")
+    @field_validator("expected_source_preference", "mentioned_systems", "search_keywords", mode="before")
     @classmethod
     def normalize_string_lists(cls, value):
         if value is None:
@@ -176,3 +181,7 @@ class ChatResponse(BaseModel):
     created_ticket_id: int | None = None
     created_ticket_external_id: str | None = None
     message_id: int | None = None
+    # Identificador de la peticion: localiza su traza extendida y su traza en LangSmith.
+    request_id: str | None = None
+    # Comportamiento final del asistente (answer_with_sources, ask_clarification, reject_prompt_injection...).
+    behavior: str | None = None

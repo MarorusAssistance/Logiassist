@@ -45,6 +45,7 @@ var webAppName = take('${baseName}-web', 60)
 var functionsPlanName = take('${baseName}-func-plan', 40)
 var indexerFunctionName = take('${baseName}-indexer', 60)
 var incidentsFunctionName = take('${baseName}-incidents', 60)
+var traceContainerName = 'rag-traces'
 var storageAccountName = toLower(take('st${uniqueString(resourceGroup().id, projectName, environmentName)}', 24))
 var postgresServerName = take('${baseName}-pg', 63)
 var postgresHost = '${postgresServerName}.postgres.database.azure.com'
@@ -187,6 +188,18 @@ module appService './modules/app-service.bicep' = {
         value: '/home/site/wwwroot:/home/site/wwwroot/src:/home/site/wwwroot/.python_packages/lib/site-packages'
       }
       {
+        name: 'TRACE_STORE'
+        value: 'azure_blob'
+      }
+      {
+        name: 'TRACE_STORE_ACCOUNT_URL'
+        value: 'https://${storageAccountName}.blob.${environment().suffixes.storage}'
+      }
+      {
+        name: 'TRACE_STORE_CONTAINER'
+        value: traceContainerName
+      }
+      {
         name: 'WEBSITE_RUN_FROM_PACKAGE'
         value: '0'
       }
@@ -195,6 +208,17 @@ module appService './modules/app-service.bicep' = {
         value: 'true'
       }
     ])
+  }
+}
+
+module traceStorage './modules/trace-storage.bicep' = {
+  name: '${baseName}-trace-storage'
+  params: {
+    storageAccountName: storage.outputs.storageAccountName
+    containerName: traceContainerName
+    writerPrincipalIds: [
+      appService.outputs.principalId
+    ]
   }
 }
 

@@ -12,6 +12,28 @@ def _fake_session_scope():
     yield object()
 
 
+class AllowAllLimiter:
+    recorded: list = []
+
+    def __init__(self, _session, _settings):
+        pass
+
+    def check(self, key):
+        from internal_assistant.security.usage_limits import LimitDecision
+
+        return LimitDecision(allowed=True)
+
+    def record(self, key, tokens):
+        AllowAllLimiter.recorded.append(key)
+
+
+class DenyLimiter(AllowAllLimiter):
+    def check(self, key):
+        from internal_assistant.security.usage_limits import LimitDecision
+
+        return LimitDecision(False, "client_burst", "Has hecho muchas preguntas seguidas.", 300)
+
+
 class FakeStreamingChatService:
     def __init__(self, _session):
         pass
@@ -46,6 +68,7 @@ def test_api_chat_stream_returns_token_sources_and_final_events(app_paths, load_
     module = load_module("app_service_main_stream", app_paths["app_service"])
     monkeypatch.setattr(module, "session_scope", _fake_session_scope)
     monkeypatch.setattr(module, "ChatService", FakeStreamingChatService)
+    monkeypatch.setattr(module, "UsageLimiter", AllowAllLimiter)
     client = TestClient(module.app)
 
     with client.stream(
@@ -61,3 +84,17 @@ def test_api_chat_stream_returns_token_sources_and_final_events(app_paths, load_
     assert "event: sources" in body
     assert "event: final" in body
     assert '"conversation_id": 42' in body
+
+
+def test_api_chat_stream_returns_429_when_usage_limit_is_reached(app_paths, load_module, monkeypatch):
+    module = load_module("app_service_main_stream_limited", app_paths["app_service"])
+    monkeypatch.setattr(module, "session_scope", _fake_session_scope)
+    monkeypatch.setattr(module, "ChatService", FakeStreamingChatService)
+    monkeypatch.setattr(module, "UsageLimiter", DenyLimiter)
+    client = TestClient(module.app)
+
+    response = client.post("/api/chat/stream", json={"user_id": "u1", "message": "hola", "channel": "web-demo"})
+
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "300"
+    assert "muchas preguntas" in response.json()["detail"]

@@ -41,7 +41,7 @@ class FakeEvalService:
     def __init__(self, session, llm_provider=None):
         self.session = session
 
-    def retrieve(self, message, retrieval_config=None):
+    def retrieve(self, message, retrieval_config=None, keyword_query=None):
         return [
             RetrievedChunk(
                 chunk_id=1,
@@ -53,7 +53,7 @@ class FakeEvalService:
             )
         ]
 
-    def simulate_chat(self, request, *, state=None, retrieval_config=None):
+    def simulate_chat(self, request, *, state=None, retrieval_config=None, trace_metadata=None):
         response = ChatResponse(
             conversation_id=request.conversation_id or 1,
             answer="LogiCore ERP requiere trazabilidad operativa y evidencia documentada.",
@@ -86,10 +86,10 @@ class FakeMultiTurnService:
     def __init__(self, session, llm_provider=None):
         self.session = session
 
-    def retrieve(self, message, retrieval_config=None):
+    def retrieve(self, message, retrieval_config=None, keyword_query=None):
         return []
 
-    def simulate_chat(self, request, *, state=None, retrieval_config=None):
+    def simulate_chat(self, request, *, state=None, retrieval_config=None, trace_metadata=None):
         current = dict(state or {})
         step = int(current.get("step", 0))
         if step < 2:
@@ -394,7 +394,7 @@ def test_run_answer_eval_handles_multiturn_sequence(tmp_path):
 class FakeMeteredEvalService(FakeEvalService):
     """Simula las llamadas reales que registra el provider durante un turno."""
 
-    def simulate_chat(self, request, *, state=None, retrieval_config=None):
+    def simulate_chat(self, request, *, state=None, retrieval_config=None, trace_metadata=None):
         record_usage(component="embeddings", purpose="embedding", provider="openai", model="text-embedding-3-small", input_tokens=10)
         record_usage(component="reranker", purpose="rerank", provider="cohere_azure", model="rerank-v3.5", search_units=1)
         record_usage(component="chat", purpose="planner", provider="openai", model="gpt-4o-mini", input_tokens=400, output_tokens=30)

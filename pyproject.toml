@@ -25,6 +25,9 @@ dependencies = [
   "uvicorn[standard]>=0.34.0",
   "langsmith>=0.8.3",
   "opentelemetry-api>=1.40.0",
+  "anthropic>=1.15.0",
+  "azure-storage-blob>=12.31.0",
+  "azure-identity>=1.25.3",
 ]
 
 [project.optional-dependencies]

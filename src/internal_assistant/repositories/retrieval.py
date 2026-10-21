@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 
 from sqlalchemy import String, bindparam, text
@@ -7,6 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Session
 
 from internal_assistant.models import Chunk, RetrievalLog
+from internal_assistant.observability.trace_store import record_trace_event
 from internal_assistant.observability.tracing import set_span_attributes, start_span
 from internal_assistant.rag.filters import RetrievalFilters, normalize_retrieval_filters
 
@@ -92,7 +94,7 @@ class ChunkRepository:
         self.session.flush()
         return chunk
 
-    def vector_search(self, embedding: list[float], limit: int = 15, filters: RetrievalFilters | dict | None = None) -> list[dict]:
+    def vector_search(self, embedding: list[float], limit: int = 50, filters: RetrievalFilters | dict | None = None) -> list[dict]:
         filter_sql, filter_params = _filters_sql(filters)
         with start_span(
             "retrieval.vector_search",
@@ -127,30 +129,104 @@ class ChunkRepository:
             )
             return payload
 
-    def text_search(self, query: str, limit: int = 15, filters: RetrievalFilters | dict | None = None) -> list[dict]:
+    def text_search(self, query: str, limit: int = 50, filters: RetrievalFilters | dict | None = None) -> list[dict]:
+        """Busqueda por palabras clave con BM25 (como Azure AI Search), sobre el tsvector `spanish`.
+
+        - Coincidencia OR entre terminos (searchMode=any), no AND como `plainto_tsquery`.
+        - Puntuacion BM25 (k1=1.2, b=0.75, idf de Lucene) con estadisticas de todo el indice,
+          como hace un motor de busqueda aunque la consulta lleve filtros.
+        """
         filter_sql, filter_params = _filters_sql(filters)
         with start_span(
             "retrieval.text_search",
             {"retrieval.text.limit": limit, "query.length": len(query), "retrieval.filters.active": bool(filter_sql)},
         ) as span:
+            terms = [
+                row[0]
+                for row in self.session.execute(
+                    text("SELECT DISTINCT unnest(tsvector_to_array(to_tsvector('spanish', :query)))"),
+                    {"query": query or ""},
+                ).all()
+            ]
+            if not terms:
+                set_span_attributes(span, {"retrieval.text.result_count": 0, "retrieval.text.terms": []})
+                return []
+
+            or_query = " | ".join("'" + term.replace("'", "''") + "'" for term in terms)
             stmt = text(
                 f"""
-                SELECT {_chunk_select_columns()},
-                       ts_rank_cd(full_text_tsvector, plainto_tsquery('spanish', :query)) AS score
-                FROM chunks
-                WHERE full_text_tsvector @@ plainto_tsquery('spanish', :query)
-                {filter_sql}
-                ORDER BY score DESC
-                LIMIT :limit
+                WITH cand AS (
+                    SELECT {_chunk_select_columns()}, full_text_tsvector AS tsv
+                    FROM chunks
+                    WHERE full_text_tsvector @@ to_tsquery('simple', :or_query)
+                    {filter_sql}
+                )
+                SELECT cand.*,
+                       (SELECT COALESCE(SUM(COALESCE(array_length(u.positions, 1), 1)), 0) FROM unnest(cand.tsv) u) AS doc_len,
+                       (SELECT COALESCE(jsonb_object_agg(u.lexeme, COALESCE(array_length(u.positions, 1), 1)), '{{}}'::jsonb)
+                          FROM unnest(cand.tsv) u WHERE u.lexeme = ANY(:terms)) AS term_freqs
+                FROM cand
                 """
             )
-            stmt = _bind_filter_params(stmt, filter_params)
-            rows = self.session.execute(stmt, {"query": query, "limit": limit, **filter_params}).mappings().all()
-            payload = [dict(row) for row in rows]
+            stmt = _bind_filter_params(stmt, filter_params).bindparams(bindparam("terms", type_=ARRAY(String())))
+            rows = [dict(row) for row in self.session.execute(stmt, {"or_query": or_query, "terms": terms, **filter_params}).mappings().all()]
+
+            stats = self.session.execute(
+                text(
+                    """
+                    SELECT COUNT(*) AS n,
+                           COALESCE(AVG((SELECT SUM(COALESCE(array_length(u.positions, 1), 1)) FROM unnest(full_text_tsvector) u)), 1) AS avgdl
+                    FROM chunks WHERE full_text_tsvector IS NOT NULL
+                    """
+                )
+            ).mappings().one()
+            df_rows = self.session.execute(
+                text(
+                    """
+                    SELECT u.lexeme, COUNT(*) AS df
+                    FROM chunks c, unnest(c.full_text_tsvector) u
+                    WHERE u.lexeme = ANY(:terms)
+                    GROUP BY u.lexeme
+                    """
+                ).bindparams(bindparam("terms", type_=ARRAY(String()))),
+                {"terms": terms},
+            ).all()
+            document_frequency = {lexeme: int(df) for lexeme, df in df_rows}
+            scored = bm25_rank(
+                rows,
+                document_frequency=document_frequency,
+                total_documents=int(stats["n"] or 0),
+                average_length=float(stats["avgdl"] or 1.0),
+            )[:limit]
+            payload = [{key: value for key, value in row.items() if key not in {"tsv", "doc_len", "term_freqs"}} for row in scored]
+            record_trace_event(
+                "retrieval.bm25",
+                {
+                    "query": query,
+                    "lexemes": terms,
+                    "document_frequency": document_frequency,
+                    "total_documents": int(stats["n"] or 0),
+                    "average_length": round(float(stats["avgdl"] or 1.0), 2),
+                    "matched_candidates": len(rows),
+                    "filters_active": bool(filter_sql),
+                    "top": [
+                        {
+                            "chunk_id": row["id"],
+                            "source": f"{row['source_type']}:{row['source_id']}",
+                            "bm25": round(float(row.get("score") or 0.0), 4),
+                            "doc_len": row.get("doc_len"),
+                            "term_freqs": row.get("term_freqs"),
+                        }
+                        for row in scored[:limit]
+                    ],
+                },
+            )
             scores = [float(row.get("score") or 0.0) for row in payload]
             set_span_attributes(
                 span,
                 {
+                    "retrieval.text.terms": terms,
+                    "retrieval.text.matched_count": len(rows),
                     "retrieval.text.result_count": len(payload),
                     "retrieval.text.chunk_ids": [row["id"] for row in payload],
                     "retrieval.text.score_min": min(scores) if scores else 0.0,
@@ -158,6 +234,25 @@ class ChunkRepository:
                 },
             )
             return payload
+
+
+BM25_K1 = 1.2
+BM25_B = 0.75
+
+
+def bm25_rank(rows: list[dict], *, document_frequency: dict[str, int], total_documents: int, average_length: float) -> list[dict]:
+    """Ordena filas por BM25 (formula de Lucene, la que usa Azure AI Search por defecto)."""
+    n = max(1, total_documents)
+    avgdl = max(1e-9, average_length)
+    for row in rows:
+        length = float(row.get("doc_len") or 0.0)
+        score = 0.0
+        for term, tf in (row.get("term_freqs") or {}).items():
+            df = document_frequency.get(term, 0)
+            idf = math.log(1 + (n - df + 0.5) / (df + 0.5))
+            score += idf * (tf * (BM25_K1 + 1)) / (tf + BM25_K1 * (1 - BM25_B + BM25_B * length / avgdl))
+        row["score"] = score
+    return sorted(rows, key=lambda row: row["score"], reverse=True)
 
 
 class RetrievalLogRepository:

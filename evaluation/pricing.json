@@ -2,29 +2,84 @@
   "_meta": {
     "version": 1,
     "currency": "USD",
-    "units": "chat/embeddings: USD por 1M tokens; reranker: USD por 1K search units",
+    "units": "chat/embeddings: USD por 1M tokens; reranker: USD por 1K search units (Cohere) o por 1M tokens (Voyage)",
     "sources": [
       "https://openai.com/api/pricing/",
-      "https://cohere.com/pricing (rerank-v3.5; mismo precio en Azure AI Foundry serverless como Cohere-rerank-v3.5)"
+      "https://cohere.com/pricing (rerank-v3.5; mismo precio en Azure AI Foundry serverless como Cohere-rerank-v3.5)",
+      "https://platform.claude.com/docs/en/about-claude/pricing (claude-haiku-5-5; Foundry factura a tarifa estandar)",
+      "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/-/4477076 (Cohere-rerank-v4.0-fast, Global Standard)",
+      "https://techcommunity.microsoft.com/blog/azure-ai-foundry-blog/introducing-deepseek-v4-flash-and-v4-pro-in-microsoft-foundry/4515174 (DeepSeek-V4-Flash, precio Global; Data Zone suele ser ~10% mas)",
+      "https://www.mongodb.com/docs/voyageai/management/billing/ (rerank-3 / rerank-3-lite; 200M tokens gratis)",
+      "https://cloudprice.net/models/azure/gpt-5.4-mini (gpt-5.4-mini Azure; verificar en la pagina oficial)"
     ],
-    "updated_at": "2026-10-19",
-    "notes": "Precios de lista sin descuentos (Batch API, compromisos). Revisa los precios contra las fuentes y actualiza updated_at cuando cambien. Se puede sobrescribir con EVAL_PRICING_PATH."
+    "updated_at": "2026-10-20",
+    "notes": "Precios de lista sin descuentos (Batch API, compromisos). Revisa los precios contra las fuentes y actualiza updated_at cuando cambien. Se puede sobrescribir con EVAL_PRICING_PATH. Claude Haiku 5.5: tarifa para prompts <=100K tokens (por encima: 0.50/2.50); las escrituras en cache (1.25x) se cuentan como input normal."
   },
-  "free_providers": ["mock", "openai_compatible", "http"],
+  "free_providers": [
+    "mock",
+    "openai_compatible",
+    "http"
+  ],
   "chat": {
-    "gpt-4o-mini": {"input_per_1m": 0.15, "cached_input_per_1m": 0.075, "output_per_1m": 0.60},
-    "gpt-4o": {"input_per_1m": 2.50, "cached_input_per_1m": 1.25, "output_per_1m": 10.00},
-    "gpt-4.1-mini": {"input_per_1m": 0.40, "cached_input_per_1m": 0.10, "output_per_1m": 1.60}
+    "gpt-4o-mini": {
+      "input_per_1m": 0.15,
+      "cached_input_per_1m": 0.075,
+      "output_per_1m": 0.6
+    },
+    "gpt-4o": {
+      "input_per_1m": 2.5,
+      "cached_input_per_1m": 1.25,
+      "output_per_1m": 10.0
+    },
+    "gpt-4.1-mini": {
+      "input_per_1m": 0.4,
+      "cached_input_per_1m": 0.1,
+      "output_per_1m": 1.6
+    },
+    "claude-haiku-5-5": {
+      "input_per_1m": 0.1,
+      "cached_input_per_1m": 0.01,
+      "output_per_1m": 0.5
+    },
+    "deepseek-v4-flash": {
+      "input_per_1m": 0.19,
+      "cached_input_per_1m": 0.028,
+      "output_per_1m": 0.51
+    },
+    "gpt-5.4-mini": {
+      "input_per_1m": 0.75,
+      "cached_input_per_1m": 0.075,
+      "output_per_1m": 4.5
+    }
   },
   "embeddings": {
-    "text-embedding-3-small": {"input_per_1m": 0.02},
-    "text-embedding-3-large": {"input_per_1m": 0.13}
+    "text-embedding-3-small": {
+      "input_per_1m": 0.02
+    },
+    "text-embedding-3-large": {
+      "input_per_1m": 0.13
+    }
   },
   "reranker": {
-    "rerank-v3.5": {"per_1k_search_units": 2.00},
-    "cohere-rerank-v3.5": {"per_1k_search_units": 2.00}
+    "rerank-v3.5": {
+      "per_1k_search_units": 2.0
+    },
+    "cohere-rerank-v3.5": {
+      "per_1k_search_units": 2.0
+    },
+    "cohere-rerank-v4.0-fast": {
+      "per_1k_search_units": 2.0
+    },
+    "rerank-3-lite": {
+      "input_per_1m": 0.02
+    },
+    "rerank-3": {
+      "input_per_1m": 0.05
+    }
   },
   "provider_default_models": {
-    "reranker": {"cohere_azure": "rerank-v3.5"}
+    "reranker": {
+      "cohere_azure": "rerank-v3.5"
+    }
   }
 }

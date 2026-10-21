@@ -19,6 +19,7 @@ Asistente conversacional interno para una empresa ficticia de logistica. Combina
 - reranking en segunda fase con un cross-encoder BGE local o Cohere Rerank
 - respuestas en streaming (SSE) con fuentes al terminar
 - defensa en capas frente a prompt injection directa e indirecta ([docs/security.md](docs/security.md))
+- trazas extendidas por peticion (plan, candidatos de cada etapa de busqueda, reranker, filtro de evidencia, prompts y salida cruda del LLM) en disco o Azure Blob ([docs/observability.md](docs/observability.md))
 - evaluacion tecnica del RAG con metricas, LLM judge y **coste real por ejecucion**
 - trazabilidad con LangSmith y Application Insights
 - despliegue en Azure con App Service, Functions, PostgreSQL y secretos en Key Vault
@@ -393,6 +394,7 @@ logiassist/
 ## Documentacion clave
 
 - [docs/security.md](docs/security.md)
+- [docs/observability.md](docs/observability.md)
 - [docs/portfolio-summary.md](docs/portfolio-summary.md)
 - [docs/tradeoffs-and-decisions.md](docs/tradeoffs-and-decisions.md)
 - [docs/demo-script.md](docs/demo-script.md)
