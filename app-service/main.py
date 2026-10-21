@@ -10,7 +10,7 @@ from typing import Annotated
 
 from botbuilder.core import ActivityHandler, BotFrameworkAdapter, BotFrameworkAdapterSettings, CardFactory, TurnContext
 from botbuilder.schema import Activity, ActivityTypes
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,14 +26,28 @@ if SRC_ROOT.exists() and str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from internal_assistant.chat import ChatService
+from internal_assistant.chat.titles import fallback_title, generate_title
+from internal_assistant.llm import build_default_provider
+from internal_assistant.models import Conversation
 from internal_assistant.config import get_settings
 from internal_assistant.db import get_session, session_scope
 from internal_assistant.observability import configure_logging, get_logger, start_span
 from internal_assistant.observability.tracing import set_span_attributes, user_hash
 from internal_assistant.observability.usage import metering
 from internal_assistant.repositories import DocumentRepository, IncidentRepository
+from internal_assistant.repositories.chat import ConversationRepository, MessageRepository
 from internal_assistant.runtime import assert_runtime_settings, build_health_report
-from internal_assistant.schemas import ChatRequest, ChatResponse, DocumentRead, FeedbackCreate, IncidentRead
+from internal_assistant.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ConversationDetail,
+    ConversationMessage,
+    ConversationRename,
+    ConversationSummary,
+    DocumentRead,
+    FeedbackCreate,
+    IncidentRead,
+)
 from internal_assistant.security.usage_limits import UsageLimiter, client_ip, client_key, total_tokens
 from internal_assistant.teams import coerce_activity_input
 
@@ -135,6 +149,23 @@ def _enforce_usage_limits(request: Request) -> str:
     return key
 
 
+def _schedule_title(conversation_id: int, question: str, answer: str) -> None:
+    """Titula la conversacion en segundo plano tras su primer intercambio (sin anadir latencia)."""
+
+    def worker() -> None:
+        try:
+            with session_scope() as title_session:
+                conversation = title_session.get(Conversation, conversation_id)
+                if conversation is None or conversation.title:
+                    return
+                conversation.title = generate_title(build_default_provider(), settings, question, answer)
+                title_session.commit()
+        except Exception as exc:
+            logger.warning("No se pudo titular la conversacion %s: %s", conversation_id, exc)
+
+    Thread(target=worker, daemon=True).start()
+
+
 def _record_usage(key: str, meter) -> None:
     try:
         with session_scope() as limits_session:
@@ -181,6 +212,7 @@ def chat(payload: ChatRequest, session: DbSession, request: Request) -> ChatResp
         with metering() as meter:
             response = service.handle_chat(payload)
         _record_usage(limit_key, meter)
+        _schedule_title(response.conversation_id, payload.message, response.answer)
         set_span_attributes(
             span,
             {
@@ -214,6 +246,7 @@ def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
                     service = ChatService(session)
                     response = service.handle_chat(payload, stream_token_callback=push_token)
                 _record_usage(limit_key, meter)
+                _schedule_title(response.conversation_id, payload.message, response.answer)
                 response_payload = response.model_dump()
                 event_queue.put(
                     (
@@ -251,6 +284,74 @@ def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+UserIdHeader = Annotated[str, Header(alias="X-User-Id", min_length=8, max_length=128)]
+
+
+def _owned_conversation(session: Session, conversation_id: int, user_id: str):
+    conversation = ConversationRepository(session).get_for_user(conversation_id, user_id)
+    if conversation is None:
+        # Mismo 404 exista o no: no se revela si el id pertenece a otro usuario.
+        raise HTTPException(status_code=404, detail="Conversacion no encontrada")
+    return conversation
+
+
+def _summary(conversation, message_count: int, first_question: str = "") -> ConversationSummary:
+    return ConversationSummary(
+        id=conversation.id,
+        title=conversation.title or fallback_title(first_question),
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at,
+        message_count=message_count,
+    )
+
+
+@app.get("/api/conversations", response_model=list[ConversationSummary])
+def list_conversations(session: DbSession, user_id: UserIdHeader) -> list[ConversationSummary]:
+    return [_summary(conversation, count) for conversation, count in ConversationRepository(session).list_for_user(user_id)]
+
+
+@app.get("/api/conversations/{conversation_id}", response_model=ConversationDetail)
+def get_conversation(conversation_id: int, session: DbSession, user_id: UserIdHeader) -> ConversationDetail:
+    conversation = _owned_conversation(session, conversation_id, user_id)
+    messages = MessageRepository(session).list_all(conversation.id)
+    first_question = next((message.content for message in messages if message.role == "user"), "")
+    return ConversationDetail(
+        id=conversation.id,
+        title=conversation.title or fallback_title(first_question),
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at,
+        messages=[
+            ConversationMessage(
+                id=message.id,
+                role=message.role,
+                content=message.content,
+                created_at=message.created_at,
+                meta=message.meta,
+            )
+            for message in messages
+        ],
+    )
+
+
+@app.patch("/api/conversations/{conversation_id}", response_model=ConversationSummary)
+def rename_conversation(
+    conversation_id: int, payload: ConversationRename, session: DbSession, user_id: UserIdHeader
+) -> ConversationSummary:
+    repository = ConversationRepository(session)
+    conversation = repository.rename(_owned_conversation(session, conversation_id, user_id), payload.title)
+    session.commit()
+    count = len(MessageRepository(session).list_all(conversation.id))
+    return _summary(conversation, count)
+
+
+@app.delete("/api/conversations/{conversation_id}", status_code=204)
+def delete_conversation(conversation_id: int, session: DbSession, user_id: UserIdHeader) -> Response:
+    repository = ConversationRepository(session)
+    repository.delete(_owned_conversation(session, conversation_id, user_id))
+    session.commit()
+    return Response(status_code=204)
 
 
 @app.post("/api/messages")

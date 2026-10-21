@@ -66,8 +66,9 @@ class FakeMessageRepository:
         self.messages: list[DummyMessage] = []
         self.next_id = 1
 
-    def create(self, conversation_id, role, content, intent=None, created_ticket_id=None):
+    def create(self, conversation_id, role, content, intent=None, created_ticket_id=None, meta=None):
         message = DummyMessage(self.next_id, conversation_id, role, content, intent, created_ticket_id)
+        message.meta = meta
         self.messages.append(message)
         self.next_id += 1
         return message

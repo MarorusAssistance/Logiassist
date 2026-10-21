@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     reranker_timeout_seconds: float = Field(default=30.0, alias="RERANKER_TIMEOUT_SECONDS")
     reranker_candidates: int = Field(default=100, alias="RERANKER_CANDIDATES")
     retrieval_context_max_tokens: int = Field(default=16000, alias="RETRIEVAL_CONTEXT_MAX_TOKENS")
+    # Titulos de conversacion con un modelo barato (deployment); vacio = la pregunta recortada.
+    title_model: str = Field(default="", alias="TITLE_MODEL")
+    title_reasoning_effort: str = Field(default="minimal", alias="TITLE_REASONING_EFFORT")
     # Limites de uso de la demo (cuentan peticiones de chat ya atendidas).
     usage_limits_enabled: bool = Field(default=True, alias="USAGE_LIMITS_ENABLED")
     usage_client_burst_requests: int = Field(default=10, alias="USAGE_CLIENT_BURST_REQUESTS")
