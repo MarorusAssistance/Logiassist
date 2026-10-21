@@ -138,6 +138,8 @@ const elements = {
   samples: document.querySelector("#samples"),
   resetButton: document.querySelector("#resetButton"),
   sources: document.querySelector("#sources"),
+  conversations: document.querySelector("#conversations"),
+  conversationsEmpty: document.querySelector("#conversationsEmpty"),
 };
 
 function defaultApiBase() {
@@ -147,22 +149,28 @@ function defaultApiBase() {
   return "http://127.0.0.1:8000/api";
 }
 
+function storage(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // Sin almacenamiento local (modo privado): la sesión funciona igual, sin recordar nada.
+  }
+  return null;
+}
+
+function newUserId() {
+  const random = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `web-${random}`;
+}
+
 function loadState() {
-  let storedBase = null;
-  let storedUser = null;
-  try {
-    storedBase = localStorage.getItem("logiassist.apiBase");
-    storedUser = localStorage.getItem("logiassist.userId");
-  } catch {
-    // Sin almacenamiento local (modo privado): valores por defecto.
-  }
-  state.apiBase = (storedBase || defaultApiBase()).trim().replace(/\/+$/, "");
-  state.userId = storedUser || `web-demo-${Math.random().toString(16).slice(2, 8)}`;
-  try {
-    localStorage.setItem("logiassist.userId", state.userId);
-  } catch {
-    // Ignorado.
-  }
+  state.apiBase = (storage("logiassist.apiBase") || defaultApiBase()).trim().replace(/\/+$/, "");
+  const storedUser = storage("logiassist.userId");
+  // Los identificadores antiguos (6 caracteres) eran adivinables: se sustituyen por uno aleatorio largo.
+  state.userId = storedUser && !/^web-demo-[0-9a-f]{6}$/.test(storedUser) ? storedUser : newUserId();
+  storage("logiassist.userId", state.userId);
 }
 
 function el(tag, className, text) {
@@ -505,7 +513,7 @@ function buildFeedback(response) {
 }
 
 function applyChatResponse(response, parts) {
-  state.conversationId = response.conversation_id;
+  setCurrentConversation(response.conversation_id);
   const sources = response.sources || [];
   const related = response.related_incidents || [];
   const turn = parts.item.dataset.turn;
@@ -530,7 +538,7 @@ function applyChatResponse(response, parts) {
 async function requestJson(path, options = {}) {
   const response = await fetch(`${state.apiBase}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", "X-User-Id": state.userId, ...(options.headers || {}) },
   });
   const text = await response.text();
   let payload = null;
@@ -643,6 +651,9 @@ async function sendMessage(message) {
       applyChatResponse(finalResponse, parts);
       // Al terminar, se muestra el inicio de la respuesta si es larga; si no, el final con las fuentes.
       if (following) revealAnswer(parts.item);
+      refreshConversations();
+      // El título lo genera el servidor en segundo plano: se vuelve a pedir en unos segundos.
+      window.setTimeout(refreshConversations, 4000);
     }
   } catch (error) {
     if (error.status === 429) {
@@ -687,13 +698,152 @@ async function sendFeedback(response, feedbackType) {
 /* Conversación y panel */
 
 function resetConversation() {
-  state.conversationId = null;
+  setCurrentConversation(null);
   elements.messages.replaceChildren();
   elements.sources.className = "muted";
   elements.sources.textContent = "Aún no hay respuesta.";
   stopPendingStatus();
   showEmptyState(true);
   window.scrollTo({ top: 0 });
+}
+
+/* Conversaciones guardadas */
+
+function setCurrentConversation(id) {
+  state.conversationId = id || null;
+  storage("logiassist.conversationId", id ? String(id) : null);
+  for (const row of elements.conversations.querySelectorAll(".conversation")) {
+    row.classList.toggle("is-current", Number(row.dataset.id) === state.conversationId);
+  }
+}
+
+function relativeDate(value) {
+  const date = new Date(value);
+  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return "ahora";
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
+
+async function refreshConversations() {
+  let items = [];
+  try {
+    items = await requestJson("/conversations");
+  } catch {
+    return;
+  }
+  elements.conversations.replaceChildren(...items.map(conversationRow));
+  elements.conversationsEmpty.hidden = items.length > 0;
+}
+
+function conversationRow(conversation) {
+  const item = el("li", "conversation");
+  item.dataset.id = String(conversation.id);
+  item.classList.toggle("is-current", conversation.id === state.conversationId);
+
+  const open = el("button", "row-button conversation__open");
+  open.type = "button";
+  const text = el("span", "row-button__text");
+  text.append(
+    el("span", "row-button__title conversation__title", conversation.title),
+    el("span", "row-button__detail", `${relativeDate(conversation.updated_at)} · ${conversation.message_count} mensajes`)
+  );
+  open.append(text);
+  open.addEventListener("click", () => openConversation(conversation.id));
+
+  const actions = el("span", "conversation__actions");
+  const rename = el("button", "link-button", "Renombrar");
+  rename.type = "button";
+  rename.addEventListener("click", () => startRename(item, conversation));
+  const remove = el("button", "link-button", "Borrar");
+  remove.type = "button";
+  remove.addEventListener("click", () => deleteConversation(conversation));
+  actions.append(rename, remove);
+
+  item.append(open, actions);
+  return item;
+}
+
+function startRename(item, conversation) {
+  const input = el("input", "input conversation__input");
+  input.value = conversation.title;
+  input.maxLength = 120;
+  input.setAttribute("aria-label", "Nuevo título");
+  const titleNode = item.querySelector(".conversation__open");
+  titleNode.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const title = input.value.trim();
+    if (save && title && title !== conversation.title) {
+      try {
+        await requestJson(`/conversations/${conversation.id}`, { method: "PATCH", body: JSON.stringify({ title }) });
+      } catch (error) {
+        setStatus(`No se pudo renombrar: ${error.message}`);
+      }
+    }
+    refreshConversations();
+  };
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") finish(true);
+    if (event.key === "Escape") finish(false);
+  });
+  input.addEventListener("blur", () => finish(true));
+}
+
+async function deleteConversation(conversation) {
+  if (!window.confirm(`¿Borrar «${conversation.title}»? No se puede deshacer.`)) return;
+  try {
+    await requestJson(`/conversations/${conversation.id}`, { method: "DELETE" });
+  } catch (error) {
+    setStatus(`No se pudo borrar: ${error.message}`);
+    return;
+  }
+  if (conversation.id === state.conversationId) resetConversation();
+  refreshConversations();
+}
+
+async function openConversation(id) {
+  if (state.busy) return;
+  let detail;
+  try {
+    detail = await requestJson(`/conversations/${id}`);
+  } catch {
+    setCurrentConversation(null);
+    refreshConversations();
+    return;
+  }
+  elements.messages.replaceChildren();
+  showEmptyState(false);
+  setCurrentConversation(detail.id);
+  for (const message of detail.messages) {
+    if (message.role === "user") {
+      appendUserMessage(message.content);
+      continue;
+    }
+    const meta = message.meta || {};
+    const parts = appendAssistantMessage();
+    applyChatResponse(
+      {
+        conversation_id: detail.id,
+        message_id: message.id,
+        answer: message.content,
+        sources: meta.sources || [],
+        related_incidents: meta.related_incidents || [],
+        behavior: meta.behavior,
+        request_id: meta.request_id,
+        needs_clarification: meta.needs_clarification,
+      },
+      parts
+    );
+  }
+  stopPendingStatus();
+  scrollToEnd();
 }
 
 function fillComposer(question) {
@@ -766,7 +916,11 @@ elements.messageInput.addEventListener("input", autosize);
 elements.resetButton.addEventListener("click", resetConversation);
 
 loadState();
+const savedConversation = Number(storage("logiassist.conversationId"));
 renderStarters();
 renderSystems();
 renderSamples();
 resetConversation();
+refreshConversations().then(() => {
+  if (savedConversation) openConversation(savedConversation);
+});

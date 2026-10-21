@@ -361,6 +361,7 @@ class ChatService:
                         response["answer"],
                         intent="register_incident",
                         created_ticket_id=response.get("created_ticket_id"),
+                        meta={"behavior": "register_incident", "request_id": trace_run.request_id},
                     )
                     self.session.commit()
                 response["message_id"] = assistant_message.id
@@ -398,7 +399,19 @@ class ChatService:
             meta = response.get("_meta", {})
             with start_span("chat.persist", {"conversation_id": conversation.id, "intent": intent}):
                 self.conversations.save_state(conversation, response.pop("_state"))
-                assistant_message = self.messages.create(conversation.id, "assistant", response["answer"], intent=intent)
+                assistant_message = self.messages.create(
+                    conversation.id,
+                    "assistant",
+                    response["answer"],
+                    intent=intent,
+                    meta={
+                        "behavior": meta.get("actual_behavior"),
+                        "request_id": trace_run.request_id,
+                        "sources": response.get("sources") or [],
+                        "related_incidents": response.get("related_incidents") or [],
+                        "needs_clarification": bool(response.get("needs_clarification")),
+                    },
+                )
                 self.session.commit()
             response["message_id"] = assistant_message.id
             chat_response = ChatResponse(**response, request_id=trace_run.request_id, behavior=meta.get("actual_behavior"))

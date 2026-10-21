@@ -253,6 +253,30 @@ code, pre, kbd, .mono { font-family: var(--font-mono); font-size: 0.9em; }
 .composer { display: flex; align-items: flex-end; gap: 16px; padding: 16px 0 8px; }
 .status { font-size: .875rem; padding-bottom: 20px; }
 
+/* Conversaciones guardadas */
+.conversation { position: relative; }
+.conversation .row-button { padding-right: 12px; }
+.conversation__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conversation .row-button__detail { padding-right: 150px; }
+.conversation.is-current .row-button { box-shadow: inset 1px 0 0 var(--maroon); background: var(--paper); }
+.conversation.is-current .conversation__title { color: var(--maroon); }
+.conversation__actions {
+  position: absolute; right: 0; bottom: 14px;
+  display: flex; gap: 12px; font-size: .875rem;
+  opacity: 0; transition: opacity .15s;
+}
+.conversation:hover .conversation__actions,
+.conversation:focus-within .conversation__actions,
+.conversation.is-current .conversation__actions { opacity: 1; }
+@media (hover: none) { .conversation__actions { opacity: 1; } }
+.conversation__input { margin: 10px 0 40px; }
+.input {
+  width: 100%; background: transparent; color: var(--ink);
+  font: 350 1rem/1.5 var(--font-body);
+  border: 0; border-bottom: 1px solid var(--ink-muted);
+}
+.input:focus { outline: none; border-bottom-color: var(--maroon); }
+
 /* Panel lateral */
 .side { padding: 32px var(--gutter) 48px; }
 @media (min-width: 1080px) { .side { padding: 32px 32px 48px; } }

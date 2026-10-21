@@ -50,6 +50,11 @@
       "input_per_1m": 0.75,
       "cached_input_per_1m": 0.075,
       "output_per_1m": 4.5
+    },
+    "gpt-5-nano": {
+      "input_per_1m": 0.05,
+      "cached_input_per_1m": 0.005,
+      "output_per_1m": 0.4
     }
   },
   "embeddings": {
