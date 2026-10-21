@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from queue import Queue
 import sys
@@ -12,7 +13,7 @@ from botbuilder.core import ActivityHandler, BotFrameworkAdapter, BotFrameworkAd
 from botbuilder.schema import Activity, ActivityTypes
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -64,8 +65,19 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="internal-assistant-mvp", version="0.1.0", lifespan=lifespan)
+
+
+class RevalidatedStaticFiles(StaticFiles):
+    """Obliga al navegador a revalidar (ETag) para que nunca use un app.js viejo con un index.html nuevo."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 if STATIC_ROOT.exists():
-    app.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
+    app.mount("/static", RevalidatedStaticFiles(directory=STATIC_ROOT), name="static")
 
 adapter = BotFrameworkAdapter(
     BotFrameworkAdapterSettings(
@@ -174,14 +186,26 @@ def _record_usage(key: str, meter) -> None:
         logger.warning("No se pudo registrar el uso de la peticion: %s", exc)
 
 
+def _demo_page() -> str:
+    """index.html con ?v=<hash> en app.js y styles.css: cada despliegue cambia la URL de los assets."""
+    html = (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+    for asset in ("app.js", "styles.css"):
+        digest = hashlib.sha256((STATIC_ROOT / asset).read_bytes()).hexdigest()[:12]
+        html = html.replace(f"/static/{asset}\"", f"/static/{asset}?v={digest}\"")
+    return html
+
+
+DEMO_PAGE = _demo_page() if STATIC_ROOT.exists() else ""
+
+
 @app.get("/", include_in_schema=False)
-def demo_index() -> FileResponse:
-    return FileResponse(STATIC_ROOT / "index.html")
+def demo_index() -> HTMLResponse:
+    return HTMLResponse(DEMO_PAGE, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/demo", include_in_schema=False)
-def demo_ui() -> FileResponse:
-    return FileResponse(STATIC_ROOT / "index.html")
+def demo_ui() -> HTMLResponse:
+    return HTMLResponse(DEMO_PAGE, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/health")
